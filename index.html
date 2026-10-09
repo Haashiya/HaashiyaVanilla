@@ -14,6 +14,11 @@
   <link rel="stylesheet" href="dashboard.css">
   <link rel="stylesheet" href="chat.css">
 
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/images/web/haashiya_logo.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="حاشية">
   <!-- Firebase Compatibility SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -51,7 +56,7 @@
       
       <!-- LEFT: LOGO -->
       <div class="navbar-left">
-        <a href="main.html" class="logo-link" onclick="smoothNavigate(event, 'main.html')">
+        <a href="index.html" class="logo-link" onclick="smoothNavigate(event, 'index.html')">
           <img src="assets/images/web/navbar_logo.png" alt="حاشية" class="navbar-logo">
         </a>
       </div>
@@ -60,7 +65,7 @@
       <nav class="desktop-nav">
         <ul class="nav-links">
           <li>
-            <a href="main.html" class="nav-item-link" onclick="smoothNavigate(event, 'main.html')">الرئيسية</a>
+            <a href="index.html" class="nav-item-link" onclick="smoothNavigate(event, 'index.html')">الرئيسية</a>
           </li>
 
           <!-- DROPDOWN: معرض الأرشيف -->
@@ -82,15 +87,15 @@
 
           <!-- DROPDOWN: المكتبة الرقمية -->
           <li class="nav-dropdown">
-            <a href="index.html" class="nav-item-link dropdown-trigger" onclick="smoothNavigate(event, 'index.html')">
+            <a href="library.html" class="nav-item-link dropdown-trigger" onclick="smoothNavigate(event, 'library.html')">
               <span>المكتبة الرقمية</span>
               <svg class="chevron-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
             </a>
             <ul class="dropdown-menu">
-              <li><a href="index.html#educational-materials" onclick="smoothNavigate(event, 'index.html#educational-materials')">المواد التعليمية</a></li>
-              <li><a href="index.html#general-library" onclick="smoothNavigate(event, 'index.html#general-library')">المكتبة العامة</a></li>
+              <li><a href="library.html#educational-materials" onclick="smoothNavigate(event, 'library.html#educational-materials')">المواد التعليمية</a></li>
+              <li><a href="library.html#general-library" onclick="smoothNavigate(event, 'library.html#general-library')">المكتبة العامة</a></li>
             </ul>
           </li>
 
@@ -129,7 +134,7 @@
     <div class="sidebar-divider"></div>
 
     <div class="menu-items">
-      <a href="main.html" class="menu-link menu-home">الرئيسية</a>
+      <a href="index.html" class="menu-link menu-home">الرئيسية</a>
 
       <div class="dropdown">
         <button id="archive-btn" class="dropdown-btn active">
@@ -156,8 +161,8 @@
           </svg>
         </button>
         <div id="library-submenu" class="submenu">
-          <a href="index.html#educational-materials" class="submenu-link" onclick="toggleSidebar()">المواد التعليمية</a>
-          <a href="index.html#general-library" class="submenu-link" onclick="toggleSidebar()">المكتبة العامة</a>
+          <a href="library.html#educational-materials" class="submenu-link" onclick="toggleSidebar()">المواد التعليمية</a>
+          <a href="library.html#general-library" class="submenu-link" onclick="toggleSidebar()">المكتبة العامة</a>
         </div>
       </div>
 
@@ -179,7 +184,7 @@
           <p class="hero-subtitle">الانخراط في أجواء التعلم في أي وقت ومكان</p>
         </div>
 
-        <a href="index.html" class="hero-cta-btn">
+        <a href="library.html" class="hero-cta-btn">
           <span>ادرس الآن</span>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square">
             <line x1="19" y1="12" x2="5" y2="12"></line>
@@ -203,7 +208,7 @@
             </div>
           </a>
 
-          <a href="index.html" class="service-card">
+          <a href="library.html" class="service-card">
             <div class="service-card-banner" style="background-image: url('assets/images/web/card_digitalLibrary.png');"></div>
             <div class="service-card-content">
               <h3>المكتبة الرقمية</h3>
@@ -211,7 +216,7 @@
             </div>
           </a>
 
-          <a href="index.html#educational-materials" class="service-card">
+          <a href="library.html#educational-materials" class="service-card">
             <div class="service-card-banner" style="background-image: url('assets/images/web/card_bahanajar.png');"></div>
             <div class="service-card-content">
               <h3>المواد التعليمية</h3>
@@ -569,10 +574,39 @@
       location.reload();
     }
 
+    async function initPushNotifications() {
+  if ('serviceWorker' in navigator && 'Notification' in window) {
+    try {
+      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        const messaging = firebase.messaging();
+
+        // Pass your generated Public VAPID Key here
+        const currentToken = await messaging.getToken({
+          vapidKey: 'BAnfVImfSq41zhbHVJuTO96BUR0lmq7itKq7LaFJg8MN1KlaR5Zqt6FHkhPo7IylhQjSIOBmARn-DXfT7KWoCH0',
+          serviceWorkerRegistration: registration
+        });
+
+        if (currentToken) {
+          console.log('FCM Device Token:', currentToken);
+          // Save this token to your user's document in Firestore
+        } else {
+          console.warn('No registration token available.');
+        }
+      }
+    } catch (err) {
+      console.error('Push Notification Error:', err);
+    }
+  }
+}
+
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', () => {
       initSidebarEvents();
       checkUserSession();
+      initPushNotifications();
     });
   </script>
 
