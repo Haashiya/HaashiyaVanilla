@@ -552,7 +552,14 @@
   let currentEditingTaskId = null;
 
   // --- NAVIGATION & ACCESS GUARD ---
+  // --- NAVIGATION & ACCESS GUARD ---
   function switchAdminTab(tabId, btnElement) {
+    // 1. Restriction Check: Lock Database tab to Superadmin only
+    if (tabId === 'databaseTab' && currentUserRole !== 'superadmin') {
+      showToast('عذراً، هذا القسم مخصص للمشرف العام (Superadmin) فقط', 'error');
+      return; // Stop tab switching
+    }
+
     document.querySelectorAll('.tab-section').forEach(sec => sec.classList.remove('active'));
     document.querySelectorAll('.admin-tab-btn').forEach(btn => {
       btn.classList.remove('active');
@@ -614,6 +621,14 @@
 
     if (nameEl) nameEl.textContent = user.name || user.username;
     if (badgeEl) badgeEl.textContent = currentUserRole === 'superadmin' ? 'Superadmin' : 'Admin';
+
+    // Optional: Dim Database tab for regular admins
+    const dbTabBtn = document.querySelector('button[onclick*="databaseTab"]');
+    if (dbTabBtn && currentUserRole !== 'superadmin') {
+      dbTabBtn.style.opacity = '0.4';
+      dbTabBtn.style.cursor = 'not-allowed';
+      dbTabBtn.title = 'قسم مخصص للمشرف العام (Superadmin) فقط';
+    }
 
     await loadStudentDatabase();
   }
