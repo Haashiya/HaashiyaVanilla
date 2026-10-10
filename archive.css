@@ -206,6 +206,40 @@
     margin: 0;
   }
 
+  /* --- COMING SOON PLACEHOLDER STYLES --- */
+.coming-soon-placeholder {
+  grid-column: 1 / -1;
+  background: #ffffff;
+  border: 2px dashed #cbd5e1;
+  border-radius: 16px;
+  padding: 40px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.coming-soon-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  font-size: 1.1rem;
+  font-weight: 800;
+  padding: 6px 20px;
+  border-radius: 20px;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+  margin-bottom: 10px;
+}
+
+.coming-soon-text {
+  color: #64748b;
+  font-size: 0.92rem;
+  font-weight: 600;
+  margin: 0;
+}
+
   /* --- WHITEBOARD & PHOTO GALLERY GRID --- */
   .gallery-grid {
     display: grid;

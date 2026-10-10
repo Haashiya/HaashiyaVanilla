@@ -10,6 +10,27 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700;800&family=Work+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="dashboard.css">
+
+  <!-- Firebase Compatibility SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    // Initialize Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyBJWMb7l6DT1PFRUoDbi59FSs1iOZPntWI",
+      authDomain: "haashiya-web.firebaseapp.com",
+      projectId: "haashiya-web",
+      storageBucket: "haashiya-web.firebasestorage.app",
+      messagingSenderId: "340726241497",
+      appId: "1:340726241497:web:b5f62320301fc724fac6c8"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.firestore();
+  </script>
 </head>
 
 <body>
@@ -35,7 +56,7 @@
     <section class="main-card-section">
       <div class="section-header">
         <h2 id="categoryPageTitle" class="section-title">جميع الكتب</h2>
-        <a href="index.html" class="view-all-link" onclick="smoothNavigate(event, 'index.html')">&rarr; العودة للرئيسية</a>
+        <a href="library.html" class="view-all-link" onclick="smoothNavigate(event, 'library.html')">&rarr; العودة للرئيسية</a>
       </div>
 
       <!-- Book List Container -->
@@ -168,76 +189,91 @@
     // Default Educational Books List
     
 
-    // --- DETECT CATEGORY FROM URL & LOAD BOOKS ---
-    document.addEventListener('DOMContentLoaded', async () => {
-  checkUserSession();
+   // --- DETECT CATEGORY FROM URL & LOAD BOOKS ---
+   document.addEventListener('DOMContentLoaded', async () => {
+      checkUserSession();
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const category = urlParams.get('cat') || 'educational';
-  const pageTitle = document.getElementById('categoryPageTitle');
-  const container = document.getElementById('categoryBooksContainer');
+      const urlParams = new URLSearchParams(window.location.search);
+      const category = urlParams.get('cat') || 'educational';
+      const pageTitle = document.getElementById('categoryPageTitle');
+      const container = document.getElementById('categoryBooksContainer');
 
-  if (category === 'general') {
-    pageTitle.textContent = 'جميع كتب المكتبة العامة';
-    const approved = JSON.parse(localStorage.getItem('approvedBooksDB') || '[]');
-    if (approved.length === 0) {
-      container.innerHTML = '<p style="text-align:center; color:#94a3b8; font-size:0.9rem; padding:30px 0;">لا توجد كتب مضافة في المكتبة العامة حالياً</p>';
-    } else {
-      approved.forEach(book => {
-        container.innerHTML += `
-          <div class="book-row-card">
-            <div class="book-row-right">
-              <img src="${book.coverUrl}" alt="${book.title}" class="book-row-cover">
-              <div class="book-row-details">
-                <h3 class="book-row-title">${book.title}</h3>
-                <p class="book-row-author">${book.author}</p>
-                <span class="book-row-meta">المكتبة العامة - الفن: ${book.theme}</span>
+      if (category === 'general') {
+        pageTitle.textContent = 'جميع كتب المكتبة العامة';
+        container.innerHTML = '<p style="text-align:center; color:#64748b; padding:20px 0;">جاري تحميل كتب المكتبة العامة...</p>';
+
+        try {
+          // Fetch all approved public library books directly from Firestore
+          const snapshot = await db.collection('approved_books').orderBy('createdAt', 'desc').get();
+
+          if (snapshot.empty) {
+            container.innerHTML = '<p style="text-align:center; color:#94a3b8; font-size:0.9rem; padding:30px 0;">لا توجد كتب مضافة في المكتبة العامة حالياً</p>';
+            return;
+          }
+
+          container.innerHTML = '';
+          snapshot.forEach(doc => {
+            const book = doc.data();
+            const uploaderName = book.uploadedBy ? ` | الناشر: ${book.uploadedBy}` : '';
+
+            container.innerHTML += `
+              <div class="book-row-card">
+                <div class="book-row-right">
+                  <img src="${book.coverUrl}" alt="${book.title}" class="book-row-cover">
+                  <div class="book-row-details">
+                    <h3 class="book-row-title">${book.title}</h3>
+                    <p class="book-row-author">${book.author}</p>
+                    <span class="book-row-meta">المكتبة العامة - الفن: ${book.theme}${uploaderName}</span>
+                  </div>
+                </div>
+                <div class="book-row-actions">
+                  <a href="${book.pdfUrl}" target="_blank" class="action-icon-btn" title="قراءة">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                  </a>
+                  <a href="${book.pdfUrl}" download="${book.title}.pdf" class="action-icon-btn" title="تحميل">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                  </a>
+                </div>
+              </div>
+            `;
+          });
+        } catch (err) {
+          console.error('Error fetching general library books:', err);
+          container.innerHTML = '<p style="text-align:center; color:#ef4444; font-size:0.9rem; padding:30px 0;">حدث خطأ أثناء تحميل الكتب</p>';
+        }
+
+      } else {
+        pageTitle.textContent = 'جميع كتب المواد التعليمية';
+        container.innerHTML = '';
+        
+        // Fetch books dynamically from books.json
+        const response = await fetch('data/books.json');
+        const books = await response.json();
+
+        books.forEach(book => {
+          container.innerHTML += `
+            <div class="book-row-card">
+              <div class="book-row-right">
+                <img src="${book.coverUrl}" alt="${book.title}" class="book-row-cover">
+                <div class="book-row-details">
+                  <h3 class="book-row-title">${book.title}</h3>
+                  <p class="book-row-author">${book.author}</p>
+                  <span class="book-row-meta">${book.meta}</span>
+                </div>
+              </div>
+              <div class="book-row-actions">
+                <a href="${book.pdfUrl}" target="_blank" class="action-icon-btn" title="قراءة">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                </a>
+                <a href="${book.pdfUrl}" download class="action-icon-btn" title="تحميل">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                </a>
               </div>
             </div>
-            <div class="book-row-actions">
-              <a href="${book.pdfUrl}" target="_blank" class="action-icon-btn" title="قراءة">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-              </a>
-              <a href="${book.pdfUrl}" download="${book.title}.pdf" class="action-icon-btn" title="تحميل">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-              </a>
-            </div>
-          </div>
-        `;
-      });
-    }
-  } else {
-    pageTitle.textContent = 'جميع كتب المواد التعليمية';
-    container.innerHTML = '';
-    
-    // Fetch books dynamically from books.json
-    const response = await fetch('data/books.json');
-    const books = await response.json();
-
-    books.forEach(book => {
-      container.innerHTML += `
-        <div class="book-row-card">
-          <div class="book-row-right">
-            <img src="${book.coverUrl}" alt="${book.title}" class="book-row-cover">
-            <div class="book-row-details">
-              <h3 class="book-row-title">${book.title}</h3>
-              <p class="book-row-author">${book.author}</p>
-              <span class="book-row-meta">${book.meta}</span>
-            </div>
-          </div>
-          <div class="book-row-actions">
-            <a href="${book.pdfUrl}" target="_blank" class="action-icon-btn" title="قراءة">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-            </a>
-            <a href="${book.pdfUrl}" download class="action-icon-btn" title="تحميل">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-            </a>
-          </div>
-        </div>
-      `;
+          `;
+        });
+      }
     });
-  }
-});
 
   </script>
 

@@ -26,6 +26,21 @@
   window.supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 </script>
 
+<script>
+  (function enforceAdminGuard() {
+    const sessionData = localStorage.getItem('currentUser');
+    if (!sessionData) {
+      window.location.href = 'login.html';
+      return;
+    }
+    const user = JSON.parse(sessionData);
+    if (user.role !== 'admin' && user.role !== 'superadmin') {
+      alert('عذراً، هذه الصفحة مخصصة للمشرفين فقط.');
+      window.location.href = 'index.html';
+    }
+  })();
+</script>
+
 </head>
 
 <body>

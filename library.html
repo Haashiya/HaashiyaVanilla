@@ -478,11 +478,12 @@ const publicLibrarySection = document.getElementById('general-library');
     function checkUserSession() {
       const sessionData = localStorage.getItem('currentUser');
       const navbarRight = document.querySelector('.navbar-right');
-  
+
       if (sessionData && navbarRight) {
         const user = JSON.parse(sessionData);
+        const isAdminOrSuper = user.role === 'admin' || user.role === 'superadmin';
         const isMale = user.gender === 'male';
-  
+
         const genderBadgeHTML = isMale ? `
           <span class="gender-badge gender-male">
             <svg class="gender-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -501,11 +502,22 @@ const publicLibrarySection = document.getElementById('general-library');
             </svg>
             طالبة
           </span>`;
-  
+
+        const adminDropdownLink = isAdminOrSuper ? `
+          <a href="admin.html" class="dropdown-item admin-dropdown-item" onclick="smoothNavigate(event, 'admin.html')" style="color: #d97706; font-weight: 700;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            لوحة التحكم (الإدارة)
+          </a>
+          <div class="dropdown-divider"></div>
+        ` : '';
+
         navbarRight.innerHTML = `
           <div class="user-profile-wrapper">
             <button class="user-profile-badge" onclick="toggleProfileDropdown(event)">
-              <img src="${user.avatar}" alt="${user.name}" class="profile-avatar" onError="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=1565c0&color=fff'">
+              <img src="${user.avatar || 'assets/images/web/default_avatar.png'}" alt="${user.name}" class="profile-avatar" onError="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=1565c0&color=fff'">
               <div class="profile-info-group">
                 <span class="profile-name">${user.name}</span>
                 ${genderBadgeHTML}
@@ -513,8 +525,9 @@ const publicLibrarySection = document.getElementById('general-library');
               <span class="nav-unread-dot" style="display: none;"></span>
               <svg class="dropdown-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </button>
-  
+
             <div id="profileDropdown" class="profile-dropdown-menu">
+              ${adminDropdownLink}
               <a href="profile.html" class="dropdown-item" onclick="smoothNavigate(event, 'profile.html')">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -522,7 +535,7 @@ const publicLibrarySection = document.getElementById('general-library');
                 </svg>
                 الملف الشخصي
               </a>
-  
+
               <a href="#" class="dropdown-item" onclick="openNotificationsModal(event)">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
@@ -531,9 +544,9 @@ const publicLibrarySection = document.getElementById('general-library');
                 الإشعارات
                 <span class="unread-badge" style="display: none;">0</span>
               </a>
-              
+
               <div class="dropdown-divider"></div>
-              
+
               <button class="dropdown-item logout-item" onclick="logoutUser()">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -544,7 +557,7 @@ const publicLibrarySection = document.getElementById('general-library');
               </button>
             </div>
           </div>
-  
+
           <button id="open-sidebar-btn" class="btn-menu mobile-only-btn" aria-label="القائمة" onclick="toggleSidebar()">
             <svg width="22" height="22" viewBox="0 0 16 18" fill="currentColor">
               <path d="M8 1L11.5 4.5L8 8L4.5 4.5Z" />
@@ -553,8 +566,8 @@ const publicLibrarySection = document.getElementById('general-library');
             </svg>
           </button>
         `;
-  
-        if (user.role === 'admin' || user.role === 'superadmin') {
+
+        if (isAdminOrSuper) {
           const adminBtn = document.getElementById('adminQueueBtn');
           if (adminBtn) adminBtn.style.display = 'inline-flex';
           updatePendingBadgeCount();
@@ -817,6 +830,7 @@ async function rejectBook(docId) {
   }
 }
   
+// --- LISTEN TO APPROVED BOOKS (LIMIT TO 3 RANDOM BOOKS ON REFRESH) ---
 function listenToApprovedBooks() {
   const container = document.querySelector('#general-library .book-list-container');
   if (!container) return;
@@ -826,21 +840,39 @@ function listenToApprovedBooks() {
   const isAdmin = user && (user.role === 'admin' || user.role === 'superadmin');
 
   db.collection('approved_books')
-    .orderBy('createdAt', 'desc')
     .onSnapshot((snapshot) => {
       container.innerHTML = '';
 
-      snapshot.forEach((doc) => {
-        const book = doc.data();
+      if (snapshot.empty) {
+        container.innerHTML = '<p style="text-align:center; color:#94a3b8; font-size:0.88rem; padding: 20px 0;">لا توجد كتب مضافة في المكتبة العامة حالياً</p>';
+        return;
+      }
+
+      // 1. Map documents to array
+      let allBooks = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      // 2. Fisher-Yates Random Shuffle
+      for (let i = allBooks.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [allBooks[i], allBooks[j]] = [allBooks[j], allBooks[i]];
+      }
+
+      // 3. Take only the first 3 books
+      const displayedBooks = allBooks.slice(0, 3);
+
+      // 4. Render the 3 random books
+      displayedBooks.forEach((book) => {
         const card = document.createElement('div');
         card.className = 'book-row-card user-approved-card';
         card.setAttribute('data-category', 'general');
 
-        // Uploader credit (Fallback if older records don't have uploadedBy)
         const uploaderName = book.uploadedBy ? ` | الناشر: ${book.uploadedBy}` : '';
 
         const adminActions = isAdmin ? `
-          <button class="action-icon-btn admin-delete-btn" onclick="removeApprovedBook('${doc.id}')" title="حذف الكتاب">
+          <button class="action-icon-btn admin-delete-btn" onclick="removeApprovedBook('${book.id}')" title="حذف الكتاب">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3 6 5 6 21 6"></polyline>
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
