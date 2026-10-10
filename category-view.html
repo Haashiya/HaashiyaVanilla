@@ -52,6 +52,27 @@
     </div>
   </header>
 
+  <!-- Sidebar Overlay -->
+  <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+  <!-- Sidebar Container -->
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+      <button id="close-sidebar-btn" class="btn-close" aria-label="Tutup" onclick="toggleSidebar()">
+        <img src="assets/images/web/sidebar_icon.png" alt="Logo" class="sidebar-logo-img">
+      </button>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="menu-items">
+      <a href="index.html" class="menu-link menu-home" onclick="toggleSidebar(); smoothNavigate(event, 'index.html')">الرئيسية</a>
+      <a href="archive.html" class="menu-link" onclick="toggleSidebar(); smoothNavigate(event, 'archive.html')">معرض الأرشيف</a>
+      <a href="library.html" class="menu-link" onclick="toggleSidebar(); smoothNavigate(event, 'library.html')">المكتبة الرقمية</a>
+      <a href="index.html#glossary" class="menu-link">معجم المصطلحات</a>
+      <a href="index.html#calendar" class="menu-link">التقويم الأكاديمي</a>
+      <a href="#" class="menu-link">التعلم المدعوم بالذكاء الاصطناعي</a>
+    </div>
+  </aside>
+
   <main class="library-wrapper">
     <section class="main-card-section">
       <div class="section-header">
@@ -99,44 +120,82 @@
     <span id="errorToastMessage">حدث خطأ في المدخلات!</span>
   </div>
 
+  <!-- DELETE CONFIRMATION MODAL -->
+  <div id="deleteBookModal" class="logout-modal-overlay">
+    <div class="logout-modal-card">
+      <div class="logout-modal-icon">🗑</div>
+      <h3 class="logout-modal-title">حذف الكتاب</h3>
+      <p class="logout-modal-text">هل أنت تأكد من رغبتك في حذف هذا الكتاب بشكل نهائي من المكتبة العامة؟</p>
+      <div class="logout-modal-actions">
+        <button class="logout-confirm-btn" onclick="confirmDeleteBook()">نعم، احذف الكتاب</button>
+        <button class="logout-cancel-btn" onclick="closeDeleteBookModal()">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
   <script>
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      if (sidebar && overlay) {
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('active');
+      }
+    }
+
     function smoothNavigate(event, targetUrl) {
       event.preventDefault();
       document.body.classList.add('fade-out');
       setTimeout(() => { window.location.href = targetUrl; }, 300);
     }
 
-    // --- CHECK USER LOGIN SESSION & DROPDOWN ---
+    // --- CHECK USER LOGIN SESSION & RENDER NAVBAR ---
     function checkUserSession() {
       const sessionData = localStorage.getItem('currentUser');
       const navbarRight = document.querySelector('.navbar-right');
 
       if (sessionData && navbarRight) {
         const user = JSON.parse(sessionData);
+        const isAdminOrSuper = user.role === 'admin' || user.role === 'superadmin';
         const isMale = user.gender === 'male';
-        const genderLabel = isMale ? 'رجل ♂' : 'أنثى ♀';
-        const genderClass = isMale ? 'gender-male' : 'gender-female';
+
+        const genderBadgeHTML = isMale ? `
+          <span class="gender-badge gender-male">
+            <svg class="gender-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="10" cy="14" r="5"></circle><path d="M19 5L13.5 10.5"></path><path d="M19 5h-5"></path><path d="M19 5v5"></path></svg>
+            طالب
+          </span>` : `
+          <span class="gender-badge gender-female">
+            <svg class="gender-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="10" r="5"></circle><path d="M12 15v7"></path><path d="M9 19h6"></path></svg>
+            طالبة
+          </span>`;
+
+        const adminDropdownLink = isAdminOrSuper ? `
+          <a href="admin.html" class="dropdown-item admin-dropdown-item" onclick="smoothNavigate(event, 'admin.html')" style="color: #d97706; font-weight: 700;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            لوحة التحكم (الإدارة)
+          </a>
+          <div class="dropdown-divider"></div>
+        ` : '';
 
         navbarRight.innerHTML = `
           <div class="user-profile-wrapper">
             <button class="user-profile-badge" onclick="toggleProfileDropdown(event)">
-              <img src="${user.avatar}" alt="${user.name}" class="profile-avatar" onError="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=1565c0&color=fff'">
+              <img src="${user.avatar || 'assets/images/web/default_avatar.png'}" alt="${user.name}" class="profile-avatar" onError="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=1565c0&color=fff'">
               <div class="profile-info-group">
                 <span class="profile-name">${user.name}</span>
-                <span class="gender-badge ${genderClass}">${genderLabel}</span>
+                ${genderBadgeHTML}
               </div>
               <svg class="dropdown-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </button>
 
             <div id="profileDropdown" class="profile-dropdown-menu">
-              <a href="#" class="dropdown-item" onclick="event.preventDefault(); showErrorToast('صفحة الملف الشخصي قيد التطوير');">
+              ${adminDropdownLink}
+              <a href="profile.html" class="dropdown-item" onclick="smoothNavigate(event, 'profile.html')">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                 الملف الشخصي
-              </a>
-              <a href="#" class="dropdown-item" onclick="event.preventDefault(); showErrorToast('لا توجد إشعارات جديدة حالياً');">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-                الإشعارات
-                <span class="unread-badge">3</span>
               </a>
               <div class="dropdown-divider"></div>
               <button class="dropdown-item logout-item" onclick="logoutUser()">
@@ -145,53 +204,55 @@
               </button>
             </div>
           </div>
-          <button class="icon-btn" aria-label="Menu"><span class="dots-icon"></span></button>
+
+          <!-- Standard Diamond Mobile Sidebar Hamburger Button -->
+          <button id="open-sidebar-btn" class="btn-menu mobile-only-btn" aria-label="القائمة" onclick="toggleSidebar()">
+            <svg width="22" height="22" viewBox="0 0 16 18" fill="currentColor">
+              <path d="M8 1L11.5 4.5L8 8L4.5 4.5Z"/>
+              <path d="M8 4.5L11.5 8L8 11.5L4.5 8Z" transform="translate(0, 2)"/>
+              <path d="M8 8L11.5 11.5L8 15L4.5 11.5Z" transform="translate(0, 4)"/>
+            </svg>
+          </button>
         `;
       }
     }
 
-    function toggleProfileDropdown(e) {
-      e.stopPropagation();
-      const dropdown = document.getElementById('profileDropdown');
-      if (dropdown) dropdown.classList.toggle('show');
-    }
+    // --- DELETE BOOK HANDLERS FOR ADMINS ---
+    let currentDeletingDocId = null;
 
-    document.addEventListener('click', (e) => {
-      const dropdown = document.getElementById('profileDropdown');
-      if (dropdown && dropdown.classList.contains('show')) dropdown.classList.remove('show');
-    });
-
-    function logoutUser() {
-      const modal = document.getElementById('logoutModal');
+    function removeApprovedBook(docId) {
+      currentDeletingDocId = docId;
+      const modal = document.getElementById('deleteBookModal');
       if (modal) modal.classList.add('show');
     }
 
-    function closeLogoutModal() {
-      const modal = document.getElementById('logoutModal');
+    function closeDeleteBookModal() {
+      const modal = document.getElementById('deleteBookModal');
       if (modal) modal.classList.remove('show');
+      currentDeletingDocId = null;
     }
 
-    function confirmLogout() {
-      localStorage.removeItem('currentUser');
-      location.reload();
-    }
+    async function confirmDeleteBook() {
+      if (!currentDeletingDocId) return;
 
-    function showErrorToast(msg) {
-      const toast = document.getElementById('errorToastNotification');
-      const span = document.getElementById('errorToastMessage');
-      if (toast && span) {
-        span.textContent = msg;
-        toast.classList.add('show');
-        setTimeout(() => toast.classList.remove('show'), 3500);
+      try {
+        await db.collection('approved_books').doc(currentDeletingDocId).delete();
+        closeDeleteBookModal();
+        showErrorToast('تم حذف الكتاب بنجاح من المكتبة العامة');
+        location.reload();
+      } catch (err) {
+        console.error('Delete Error:', err);
+        showErrorToast('حدث خطأ أثناء حذف الكتاب');
       }
     }
 
-    // Default Educational Books List
-    
-
-   // --- DETECT CATEGORY FROM URL & LOAD BOOKS ---
-   document.addEventListener('DOMContentLoaded', async () => {
+    // --- LOAD CATEGORY BOOKS WITH ADMIN DELETE BUTTON ---
+    document.addEventListener('DOMContentLoaded', async () => {
       checkUserSession();
+
+      const sessionData = localStorage.getItem('currentUser');
+      const user = sessionData ? JSON.parse(sessionData) : null;
+      const isAdmin = user && (user.role === 'admin' || user.role === 'superadmin');
 
       const urlParams = new URLSearchParams(window.location.search);
       const category = urlParams.get('cat') || 'educational';
@@ -203,7 +264,6 @@
         container.innerHTML = '<p style="text-align:center; color:#64748b; padding:20px 0;">جاري تحميل كتب المكتبة العامة...</p>';
 
         try {
-          // Fetch all approved public library books directly from Firestore
           const snapshot = await db.collection('approved_books').orderBy('createdAt', 'desc').get();
 
           if (snapshot.empty) {
@@ -214,7 +274,17 @@
           container.innerHTML = '';
           snapshot.forEach(doc => {
             const book = doc.data();
+            const docId = doc.id;
             const uploaderName = book.uploadedBy ? ` | الناشر: ${book.uploadedBy}` : '';
+
+            const adminActions = isAdmin ? `
+              <button class="action-icon-btn admin-delete-btn" onclick="removeApprovedBook('${docId}')" title="حذف الكتاب">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            ` : '';
 
             container.innerHTML += `
               <div class="book-row-card">
@@ -227,6 +297,7 @@
                   </div>
                 </div>
                 <div class="book-row-actions">
+                  ${adminActions}
                   <a href="${book.pdfUrl}" target="_blank" class="action-icon-btn" title="قراءة">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                   </a>
@@ -246,7 +317,6 @@
         pageTitle.textContent = 'جميع كتب المواد التعليمية';
         container.innerHTML = '';
         
-        // Fetch books dynamically from books.json
         const response = await fetch('data/books.json');
         const books = await response.json();
 

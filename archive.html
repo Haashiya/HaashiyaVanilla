@@ -77,8 +77,8 @@
             </ul>
           </li>
 
-          <li><a href="#" class="nav-item-link">معجم المصطلحات</a></li>
-          <li><a href="#" class="nav-item-link">التقويم الأكاديمي</a></li>
+          <li><a href="index.html#glossary" class="nav-item-link">معجم المصطلحات</a></li>
+          <li><a href="index.html#calendar" class="nav-item-link">التقويم الأكاديمي</a></li>
           <li><a href="#" class="nav-item-link">التعلم بالذكاء الاصطناعي</a></li>
         </ul>
       </nav>
@@ -110,34 +110,35 @@
     <div class="sidebar-divider"></div>
   
     <div class="menu-items">
-      <a href="index.html" class="menu-link menu-home" onclick="smoothNavigate(event, 'index.html')">الرئيسية</a>
+      <a href="index.html" class="menu-link menu-home" onclick="toggleSidebar(); smoothNavigate(event, 'index.html')">الرئيسية</a>
+      
       <div class="dropdown">
-        <button id="archive-btn" class="dropdown-btn active">
+        <button id="archive-btn" class="dropdown-btn active" type="button">
           <span>معرض الأرشيف</span>
           <svg class="arrow-icon open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </button>
         <div id="archive-submenu" class="submenu open">
-          <a href="#recordings" class="submenu-link" onclick="toggleSidebar()">التسجيلات</a>
-          <a href="#assignments" class="submenu-link" onclick="toggleSidebar()">الواجبات</a>
-          <a href="#presentations" class="submenu-link" onclick="toggleSidebar()">العرض التقديمي</a>
-          <a href="#whiteboards" class="submenu-link" onclick="toggleSidebar()">السبورات</a>
-          <a href="#photos" class="submenu-link" onclick="toggleSidebar()">الصور</a>
+          <a href="#recordings" class="submenu-link" onclick="toggleSidebar(); smoothNavigate(event, '#recordings')">التسجيلات</a>
+          <a href="#assignments" class="submenu-link" onclick="toggleSidebar(); smoothNavigate(event, '#assignments')">الواجبات</a>
+          <a href="#presentations" class="submenu-link" onclick="toggleSidebar(); smoothNavigate(event, '#presentations')">العرض التقديمي</a>
+          <a href="#whiteboards" class="submenu-link" onclick="toggleSidebar(); smoothNavigate(event, '#whiteboards')">السبورات</a>
+          <a href="#photos" class="submenu-link" onclick="toggleSidebar(); smoothNavigate(event, '#photos')">الصور</a>
         </div>
       </div>
 
       <div class="dropdown">
-        <button id="library-btn" class="dropdown-btn">
+        <button id="library-btn" class="dropdown-btn" type="button">
           <span>المكتبة الرقمية</span>
           <svg class="arrow-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </button>
         <div id="library-submenu" class="submenu">
-          <a href="library.html#educational-materials" class="submenu-link" onclick="smoothNavigate(event, 'library.html#educational-materials')">المواد التعليمية</a>
-          <a href="library.html#general-library" class="submenu-link" onclick="smoothNavigate(event, 'library.html#general-library')">المكتبة العامة</a>
+          <a href="library.html#educational-materials" class="submenu-link" onclick="toggleSidebar(); smoothNavigate(event, 'library.html#educational-materials')">المواد التعليمية</a>
+          <a href="library.html#general-library" class="submenu-link" onclick="toggleSidebar(); smoothNavigate(event, 'library.html#general-library')">المكتبة العامة</a>
         </div>
       </div>
   
-      <a href="#" class="menu-link">معجم المصطلحات</a>
-      <a href="#" class="menu-link">التقويم الأكاديمي</a>
+      <a href="index.html#glossary" class="menu-link">معجم المصطلحات</a>
+      <a href="index.html#calendar" class="menu-link">التقويم الأكاديمي</a>
       <a href="#" class="menu-link">التعلم المدعوم بالذكاء الاصطناعي</a>
     </div>
   </aside>
@@ -469,15 +470,16 @@
       }
     };
 
-    if (openSidebarBtn && sidebar && overlay) {
-      openSidebarBtn.addEventListener('click', () => {
-        sidebar.classList.add('open');
-        overlay.classList.add('active');
-      });
-    }
+    if (openSidebarBtn) openSidebarBtn.onclick = toggleSidebar;
+    if (closeSidebarBtn) closeSidebarBtn.onclick = closeSidebar;
 
-    if (closeSidebarBtn) closeSidebarBtn.addEventListener('click', closeSidebar);
-    if (overlay) overlay.addEventListener('click', closeSidebar);
+    // Tap outside overlay to dismiss sidebar
+    if (overlay) {
+      overlay.onclick = (e) => {
+        e.stopPropagation();
+        closeSidebar();
+      };
+    }
 
     const toggleDropdown = (button, submenu) => {
       if (!button || !submenu) return;
@@ -496,10 +498,16 @@
     };
 
     if (archiveBtn && archiveSubmenu) {
-      archiveBtn.addEventListener('click', () => toggleDropdown(archiveBtn, archiveSubmenu));
+      archiveBtn.onclick = (e) => {
+        e.preventDefault();
+        toggleDropdown(archiveBtn, archiveSubmenu);
+      };
     }
     if (libraryBtn && librarySubmenu) {
-      libraryBtn.addEventListener('click', () => toggleDropdown(libraryBtn, librarySubmenu));
+      libraryBtn.onclick = (e) => {
+        e.preventDefault();
+        toggleDropdown(libraryBtn, librarySubmenu);
+      };
     }
   }
 
@@ -659,9 +667,14 @@
       if (isAdminOrSuper) {
           const adminBtn = document.getElementById('adminQueueBtn');
           if (adminBtn) adminBtn.style.display = 'inline-flex';
-          updatePendingBadgeCount();
+          
+          // Safe check to prevent Uncaught ReferenceError
+          if (typeof updatePendingBadgeCount === 'function') {
+            updatePendingBadgeCount();
+          }
+          
           updateNotificationBadge();
-        }    
+      }
       }
   }
 

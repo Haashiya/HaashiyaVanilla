@@ -375,6 +375,41 @@
   transform: translateY(-2px);
 }
 
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 998; /* Directly underneath sidebar */
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  pointer-events: none;
+}
+
+.sidebar-overlay.active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto; /* Enables touch/tap capture */
+}
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: -300px; /* Hidden off to the left */
+  right: auto;  /* Override default right positioning */
+  width: 280px;
+  height: 100vh;
+  z-index: 999;
+  transition: left 0.3s ease;
+}
+
+.sidebar.open {
+  left: 0;      /* Slides in from left */
+}
 /* 1. ACTIVE BLUE BANNER CARD */
 .assignment-card.active-blue-card {
   display: flex;

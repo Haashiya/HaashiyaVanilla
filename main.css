@@ -119,61 +119,103 @@
   }
 
   /* SERVICES GRID (2 Columns Mobile, 4 Columns Desktop) */
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (min-width: 992px) {
   .services-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
   }
-  
-  @media (min-width: 992px) {
-    .services-grid {
-      grid-template-columns: repeat(4, 1fr);
-      gap: 20px;
-    }
+}
+
+.service-card {
+  background: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.service-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+/* Thinner Top Banner with Blue Gradient Overlay */
+.service-card-banner {
+  height: 48px;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+.service-card-banner::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* Lowered opacity so the underlying image shines through clearly */
+  background: linear-gradient(180deg, rgba(37, 99, 235, 0.25) 0%, rgba(29, 78, 216, 0.45) 100%);
+  transition: opacity 0.2s ease;
+}
+
+/* Optional: Slight hover effect to brighten the image even more on hover */
+.service-card:hover .service-card-banner::after {
+  background: linear-gradient(180deg, rgba(37, 99, 235, 0.15) 0%, rgba(29, 78, 216, 0.35) 100%);
+}
+
+.service-card-content {
+  padding: 10px 12px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+  text-align: right;
+  direction: rtl;
+}
+
+.service-card-content h3 {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 10px 0;
+  line-height: 1.35;
+}
+
+.service-card-link {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+/* Mobile Media Query Fine-Tuning */
+@media screen and (max-width: 600px) {
+  .services-grid {
+    gap: 8px; /* Slightly tighter gap on small screens */
   }
-  
-  .service-card {
-    background: #ffffff;
-    border-radius: 16px;
-    overflow: hidden;
-    border: 1px solid #e2e8f0;
-    text-decoration: none;
-    display: flex;
-    flex-direction: column;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-  
-  .service-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
-  }
-  
+
   .service-card-banner {
-    height: 90px;
-    background-size: cover;
-    background-position: center;
+    height: 42px; /* Extra thin banner on mobile */
   }
-  
+
   .service-card-content {
-    padding: 14px 16px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    flex: 1;
+    padding: 8px 10px 10px 10px;
   }
-  
+
   .service-card-content h3 {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: #0f172a;
-    margin: 0 0 8px 0;
+    font-size: 0.85rem;
   }
-  
-  .service-card-link {
-    font-size: 0.78rem;
-    color: #64748b;
-    font-weight: 600;
-  }
+}
   
   /* FILE TYPE BADGES */
   .file-badge {
