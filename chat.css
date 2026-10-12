@@ -210,6 +210,9 @@
     unicode-bidi: plaintext;
     text-align: start;
     word-wrap: break-word;
+    white-space: pre-wrap !important; /* Preserves newlines and multiple line breaks */
+  word-break: break-word;
+  overflow-wrap: break-word;
   }
   
   /* --- INCOMING YELLOW MENTION BUBBLE --- */
@@ -270,56 +273,59 @@
   }
   
   /* --- AUTO-EXPANDING TEXTAREA FOOTER INPUT --- */
-  .chat-input-footer {
-    padding: 10px 14px;
-    background: #ffffff;
-    border-top: 1px solid #e2e8f0;
-    display: flex;
-    align-items: flex-end;
-    gap: 10px;
-    position: relative;
-    z-index: 1001;
-    flex-shrink: 0;
-  }
-  
-  .chat-input-footer textarea {
-    flex: 1;
-    padding: 10px 14px;
-    border: 1px solid #cbd5e1;
-    border-radius: 12px;
-    font-size: 0.88rem;
-    outline: none;
-    font-family: inherit;
-    unicode-bidi: plaintext;
-    text-align: start;
-    resize: none;
-    max-height: 120px;
-    min-height: 42px;
-    height: 42px;
-    line-height: 1.4;
-    box-sizing: border-box;
-    overflow-y: hidden;
-  }
-  
-  .chat-input-footer textarea:focus {
-    border-color: #1d4ed8;
-  }
+/* --- AUTO-EXPANDING TEXTAREA FOOTER INPUT --- */
+.chat-input-footer {
+  display: flex !important;
+  align-items: flex-end !important;
+  gap: 8px !important;
+  padding: 12px 14px !important;
+  background: #ffffff !important;
+  border-top: 1px solid #e2e8f0 !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  position: relative !important;
+}
+
+#chatTextInput,
+.chat-input-footer textarea {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  resize: none !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 12px !important;
+  padding: 10px 14px !important;
+  font-family: inherit !important;
+  font-size: 0.9rem !important;
+  line-height: 1.4 !important;
+  outline: none !important;
+  background: #ffffff !important;
+  box-sizing: border-box !important;
+  unicode-bidi: plaintext;
+  text-align: start;
+  max-height: 120px;
+  min-height: 42px;
+  height: 42px;
+}
+
+#chatTextInput:focus,
+.chat-input-footer textarea:focus {
+  border-color: #1d4ed8 !important;
+}
   
   .chat-send-btn {
-    width: 40px;
-    height: 40px;
-    background: #1d4ed8;
-    color: #ffffff;
-    border: none;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    flex-shrink: 0;
-    margin-bottom: 1px;
+    flex-shrink: 0 !important;
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 50% !important;
+    background: #1d4ed8 !important;
+    color: #ffffff !important;
+    border: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
   }
-  
+
   .chat-send-btn:hover {
     background: #1e40af;
   }
@@ -684,25 +690,44 @@
 }
 
 .chat-footer-stack .reply-preview-bar {
-  position: static;
+  position: relative !important;
+  bottom: auto !important;
+  left: auto !important;
+  right: auto !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 /* Attach button */
 .chat-attach-btn {
-  width: 40px;
-  height: 40px;
-  flex-shrink: 0;
-  margin-bottom: 1px;
-  background: transparent;
-  color: #64748b;
-  border: none;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  flex-shrink: 0 !important;
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: #f1f5f9 !important;
+  border: none !important;
+  cursor: pointer !important;
+  color: #64748b !important;
 }
+
+#chatTextInput {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  resize: none !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 12px !important;
+  padding: 10px 14px !important;
+  font-family: inherit !important;
+  font-size: 0.9rem !important;
+  line-height: 1.4 !important;
+  outline: none !important;
+  background: #ffffff !important;
+  box-sizing: border-box !important;
+}
+
 
 .chat-attach-btn:hover {
   background: #f1f5f9;
@@ -1057,3 +1082,13 @@
       padding-bottom: max(12px, env(safe-area-inset-bottom));
     }
   }
+
+  /* Group Mention Highlight Badge (@all, @Ikhwan, @Akhwat) */
+.mention-tag-highlight.group-mention {
+  background-color: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 6px;
+}

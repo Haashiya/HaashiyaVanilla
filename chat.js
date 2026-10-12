@@ -81,6 +81,7 @@ function formatArabicDateSeparator(date) {
 }
 
 // Background Chat Listener
+// Background Chat Listener
 function startBackgroundChatListener() {
   const firestoreDb = window.db || (typeof firebase !== 'undefined' ? firebase.firestore() : null);
   const container = document.getElementById('chatMessagesBody');
@@ -92,6 +93,7 @@ function startBackgroundChatListener() {
   
   const rawUsername = currentUser.username || currentUser.name || currentUser.email?.split('@')[0] || 'admin';
   const cleanMyUsername = rawUsername.toLowerCase().replace(/\s+/g, '').trim();
+  const myGender = (currentUser.gender || 'male').toLowerCase().trim();
 
   if (chatUnsubscribe) chatUnsubscribe();
 
@@ -107,16 +109,16 @@ function startBackgroundChatListener() {
       }
 
       if (!isInitialLoad && !isChatOpen) {
-  snapshot.docChanges().forEach(change => {
-    if (change.type === 'added') {
-      const newMsg = change.doc.data();
-      const sender = (newMsg.sender || '').toLowerCase().replace(/\s+/g, '').trim();
-      if (sender !== cleanMyUsername) {
-        incrementUnreadNotification(); // Increments count for every incoming message
+        snapshot.docChanges().forEach(change => {
+          if (change.type === 'added') {
+            const newMsg = change.doc.data();
+            const sender = (newMsg.sender || '').toLowerCase().replace(/\s+/g, '').trim();
+            if (sender !== cleanMyUsername) {
+              incrementUnreadNotification();
+            }
+          }
+        });
       }
-    }
-  });
-}
 
       closeActiveSwipeMenu = null;
       chatMessagesCache = {};
@@ -131,8 +133,6 @@ function startBackgroundChatListener() {
         chatMessagesCache[msgId] = msg;
         const attachments = Array.isArray(msg.attachments) ? msg.attachments : [];
         const replyPreviewText = textContent || getAttachmentLabel(attachments);
-        const cleanTextLower = textContent.toLowerCase().replace(/\s+/g, '');
-        const isMentioned = !isMine && cleanMyUsername && cleanTextLower.includes(`@${cleanMyUsername}`);
         const dateObj = msg.timestamp?.toDate ? msg.timestamp.toDate() : new Date();
         const now = new Date();
         const diffMinutes = (now - dateObj) / (1000 * 60);
@@ -142,11 +142,31 @@ function startBackgroundChatListener() {
         const timeStr = dateObj.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
         const formattedSenderName = formatCapitalizedUsername(msg.senderName || msg.sender);
 
-        // Styled mentions
+        // --- MENTION DETECTION LOGIC ---
+        const cleanTextLower = textContent.toLowerCase().replace(/\s+/g, '');
+
+        const isDirectMention = cleanMyUsername && cleanTextLower.includes(`@${cleanMyUsername}`);
+        const isAllMention = cleanTextLower.includes('@all');
+        const isIkhwanMention = myGender === 'male' && cleanTextLower.includes('@ikhwan');
+        const isAkhwatMention = myGender === 'female' && cleanTextLower.includes('@akhwat');
+
+        // Highlights yellow if directly mentioned, or if targeted by group mention (@all / @Ikhwan / @Akhwat)
+        const isMentioned = isDirectMention || isAllMention || isIkhwanMention || isAkhwatMention;
+
+        // --- STYLED TEXT REPLACEMENT ---
         const styledText = textContent.replace(/@([a-zA-Z0-9_]+)/g, (match, username) => {
           const cleanUser = username.toLowerCase().trim();
+          
+          if (cleanUser === 'all') {
+            return `<span class="mention-tag-highlight group-mention">@الجميع</span>`;
+          } else if (cleanUser === 'ikhwan') {
+            return `<span class="mention-tag-highlight group-mention">@الإخوان</span>`;
+          } else if (cleanUser === 'akhwat') {
+            return `<span class="mention-tag-highlight group-mention">@الأخوات</span>`;
+          }
+
           const foundAdmin = adminUsersList.find(a => a.username === cleanUser);
-          return `<span class="mention-tag-highlight">@${foundAdmin ? foundAdmin.name : username}</span>`;
+  return `<span class="mention-tag-highlight">@${foundAdmin ? foundAdmin.name : username}</span>`;
         });
 
         // Quoted Reply HTML
@@ -346,7 +366,13 @@ async function loadAdminUsersForMentions() {
 
   try {
     const snapshot = await firestoreDb.collection('users').get();
-    adminUsersList = [];
+    
+    // Add default group mentions first
+    adminUsersList = [
+      { username: 'all', name: 'الجميع (Mention All)', isGroup: true },
+      { username: 'Ikhwan', name: 'المشرفين الطلاب (Male Admins)', isGroup: true },
+      { username: 'Akhwat', name: 'المشرفات الطالبات (Female Admins)', isGroup: true }
+    ];
 
     snapshot.forEach(doc => {
       const data = doc.data();
@@ -356,7 +382,9 @@ async function loadAdminUsersForMentions() {
         const cleanUsername = (data.username || doc.id).toLowerCase().replace(/\s+/g, '');
         adminUsersList.push({
           username: cleanUsername,
-          name: data.name || cleanUsername
+          name: data.name || cleanUsername,
+          gender: (data.gender || 'male').toLowerCase().trim(),
+          isGroup: false
         });
       }
     });
