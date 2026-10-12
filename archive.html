@@ -34,6 +34,15 @@
     firebase.initializeApp(firebaseConfig);
   }
   const db = firebase.firestore();
+  
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // Initialize Supabase Client
+  const SUPABASE_URL = 'https://pdfripacgcbgggspxjyo.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkZnJpcGFjZ2NiZ2dnc3B4anlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4NzAzOTUsImV4cCI6MjEwNjQ0NjM5NX0.TxwwZwGQhPk60B0A_UIIlwPYI3NtcQu4N_LKOHDzmn8';
+  window.supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 </script>
 
 </head>
@@ -250,10 +259,13 @@
         <!-- 4. WHITEBOARDS SECTION -->
         <section id="whiteboards" class="main-card-section">
           <div class="section-header">
-            <h2 class="section-title">السبورات</h2>
-            <a href="#" class="view-all-link">&rarr; عرض الكل</a>
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <h2 class="section-title">السبورات</h2>
+              <button class="btn-upload-whiteboard" onclick="openWhiteboardUploadModal()">+ إضافة صورة سبورة</button>
+            </div>
+            <a href="#" class="view-all-link" id="whiteboardsViewAllBtn">&rarr; عرض الكل</a>
           </div>
-    
+        
           <div class="archive-filter-bar">
             <select class="level-select">
               <option value="1">المستوى الأول</option>
@@ -270,10 +282,120 @@
               <button class="cat-btn" onclick="switchSubject('whiteboards', 'pkn', this)">الوطنية الإندونيسية</button>
             </div>
           </div>
-    
-          <div id="whiteboardsContainer" class="gallery-grid"></div>
+        
+          <div id="whiteboardsContainer" class="recordings-grid"></div>
         </section>
+        
+        <!-- WHITEBOARD UPLOAD MODAL -->
+<div id="whiteboardUploadModal" class="upload-modal-overlay">
+  <div class="upload-modal-card" style="max-width: 480px;">
+    <button class="modal-close-x" onclick="closeModal('whiteboardUploadModal')">&times;</button>
+    <h3 class="upload-modal-title">رفع صورة السبورة</h3>
+    <p class="upload-modal-subtitle">اختر صورة السبورة (JPEG / PNG) وحدد المادة الدراسية</p>
+
+    <form id="whiteboardUploadForm" onsubmit="handleWhiteboardUpload(event)">
+      <div class="modal-field">
+        <label>عنوان الصورة / الملاحظة</label>
+        <input type="text" id="whiteboardTitleInput" class="modal-input" placeholder="مثال: شرح أركان التشبيه" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-family:inherit;">
+      </div>
+
+      <div class="modal-field" style="margin-top: 12px;">
+        <label>المادة الدراسية</label>
+        <select id="whiteboardSubjectSelect" class="modal-select" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-family:inherit;">
+          <option value="balagha">البلاغة</option>
+          <option value="qiraah">القراءة</option>
+          <option value="tawheed">التوحيد</option>
+          <option value="kitaba">الكتابة</option>
+          <option value="nahw">النحو</option>
+          <option value="adab">تاريخ الأدب</option>
+          <option value="indonesian">اللغة الإندونيسية</option>
+          <option value="pkn">الوطنية الإندونيسية</option>
+        </select>
+      </div>
+
+      <div class="modal-field" style="margin-top: 12px;">
+        <div class="drop-zone" onclick="document.getElementById('whiteboardFileInput').click()">
+          <svg class="drop-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+            <polyline points="21 15 16 10 5 21"></polyline>
+          </svg>
+          <span class="drop-zone-text" id="whiteboardDropZoneText">اضغط هنا لاختيار <b>صورة السبورة (JPG / PNG)</b></span>
+          <input type="file" id="whiteboardFileInput" style="display: none;" accept="image/jpeg,image/png,image/webp" onchange="updateWhiteboardFileName(this)">
+        </div>
+      </div>
+
+      <div class="upload-modal-actions" style="margin-top: 18px; display: flex; gap: 10px;">
+        <button type="submit" class="btn-submit-upload" id="btnSubmitWhiteboard" style="flex:1;">تأكيد الرفع</button>
+        <button type="button" class="btn-cancel-upload" onclick="closeModal('whiteboardUploadModal')">إلغاء</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- WHITEBOARD EDIT MODAL -->
+<div id="whiteboardEditModal" class="upload-modal-overlay">
+  <div class="upload-modal-card" style="max-width: 480px;">
+    <button class="modal-close-x" onclick="closeModal('whiteboardEditModal')">&times;</button>
+    <h3 class="upload-modal-title">تعديل بيانات السبورة</h3>
+    <p class="upload-modal-subtitle">تعديل العنوان أو المادة الدراسية</p>
+
+    <form id="whiteboardEditForm" onsubmit="handleWhiteboardUpdate(event)">
+      <input type="hidden" id="editWhiteboardDocId">
+
+      <div class="modal-field">
+        <label>عنوان الصورة / الملاحظة</label>
+        <input type="text" id="editWhiteboardTitleInput" class="modal-input" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-family:inherit;">
+      </div>
+
+      <div class="modal-field" style="margin-top: 12px;">
+        <label>المادة الدراسية</label>
+        <select id="editWhiteboardSubjectSelect" class="modal-select" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-family:inherit;">
+          <option value="balagha">البلاغة</option>
+          <option value="qiraah">القراءة</option>
+          <option value="tawheed">التوحيد</option>
+          <option value="kitaba">الكتابة</option>
+          <option value="nahw">النحو</option>
+          <option value="adab">تاريخ الأدب</option>
+          <option value="indonesian">اللغة الإندونيسية</option>
+          <option value="pkn">الوطنية الإندونيسية</option>
+        </select>
+      </div>
+
+      <div class="upload-modal-actions" style="margin-top: 18px; display: flex; gap: 10px;">
+        <button type="submit" class="btn-submit-upload" style="flex:1;">حفظ التعديلات</button>
+        <button type="button" class="btn-cancel-upload" onclick="closeModal('whiteboardEditModal')">إلغاء</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- DELETE CONFIRMATION MODAL -->
+<div id="deleteConfirmModal" class="logout-modal-overlay">
+  <div class="logout-modal-card">
+    <div class="logout-modal-icon" style="color: #dc2626;">🗑️</div>
+    <h3 class="logout-modal-title">تأكيد الحذف</h3>
+    <p class="logout-modal-text">هل أنت تأكد من أنك تريد حذف صورة هذه السبورة نهائياً؟</p>
+    <div class="logout-modal-actions">
+      <button class="logout-confirm-btn" id="btnConfirmDelete" style="background-color: #dc2626;">نعم، تأكيد الحذف</button>
+      <button class="logout-cancel-btn" onclick="closeModal('deleteConfirmModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- WHITEBOARD IMAGE PREVIEW MODAL -->
+<div id="whiteboardPreviewModal" class="upload-modal-overlay" onclick="handlePreviewBackdropClick(event)">
+  <div class="upload-modal-card" style="max-width: 850px; width: 92%; padding: 24px; text-align: center; position: relative;">
+    <button class="modal-close-x" onclick="closeModal('whiteboardPreviewModal')">&times;</button>
+    <h3 id="previewModalTitle" class="upload-modal-title" style="margin-bottom: 6px;">عنوان الصورة</h3>
+    <p id="previewModalMeta" class="upload-modal-subtitle" style="margin-bottom: 16px;">المادة والناشر</p>
     
+    <div style="width: 100%; max-height: 70vh; overflow: hidden; border-radius: 12px; background: #0f172a; display: flex; align-items: center; justify-content: center;">
+      <img id="previewModalImg" src="" alt="Whiteboard Preview" style="max-width: 100%; max-height: 70vh; object-fit: contain;">
+    </div>
+  </div>
+</div>
+
         <!-- 5. OTHER PHOTOS SECTION -->
         <section id="photos" class="main-card-section">
           <div class="section-header">
@@ -441,6 +563,10 @@
   let currentSubjectVideos = [];
   let isExpanded = false;
   let currentSubject = 'balagha';
+  let currentWhiteboardsList = [];
+  let isWhiteboardsExpanded = false;
+  let currentWhiteboardSubject = 'balagha';
+  let pendingDeleteDocID = null;
 
   // --- SIDEBAR DRAWER LOGIC ---
   function toggleSidebar() {
@@ -511,7 +637,298 @@
     }
   }
 
-  // --- NOTIFICATION HELPERS ---
+  // Open Upload Modal
+function openWhiteboardUploadModal() {
+  const sessionData = localStorage.getItem('currentUser');
+  if (!sessionData) {
+    alert('يرجى تسجيل الدخول أولاً لتمكن من إضافة الصور');
+    return;
+  }
+  document.getElementById('whiteboardUploadModal').classList.add('show');
+}
+
+function updateWhiteboardFileName(input) {
+  const label = document.getElementById('whiteboardDropZoneText');
+  if (input.files && input.files[0]) {
+    label.innerHTML = `الصورة المحددة: <b>${input.files[0].name}</b>`;
+  }
+}
+
+// Upload Handler
+async function handleWhiteboardUpload(event) {
+  event.preventDefault();
+
+  const fileInput = document.getElementById('whiteboardFileInput');
+  const titleInput = document.getElementById('whiteboardTitleInput').value.trim();
+  const subjectSelect = document.getElementById('whiteboardSubjectSelect').value;
+  const submitBtn = document.getElementById('btnSubmitWhiteboard');
+
+  const sessionData = localStorage.getItem('currentUser');
+  if (!sessionData) return;
+  const user = JSON.parse(sessionData);
+
+  if (!fileInput.files || !fileInput.files[0]) {
+    alert('يرجى اختيار ملف الصورة أولاً');
+    return;
+  }
+
+  const file = fileInput.files[0];
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'جاري الرفع...';
+
+  try {
+    // 1. Upload File to Supabase Storage Bucket
+    const fileExt = file.name.split('.').pop();
+    const fileName = `whiteboards/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+    const { data, error } = await window.supabaseClient.storage
+      .from('public-files')
+      .upload(fileName, file);
+
+    if (error) throw error;
+
+    const { data: publicUrlData } = window.supabaseClient.storage
+      .from('public-files')
+      .getPublicUrl(fileName);
+
+    const imageUrl = publicUrlData.publicUrl;
+
+    // 2. Save Document to Firestore
+    await db.collection('whiteboards').add({
+      title: titleInput,
+      subject: subjectSelect,
+      imageUrl: imageUrl,
+      uploadedBy: user.name || user.username || 'طالب',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    closeModal('whiteboardUploadModal');
+document.getElementById('whiteboardUploadForm').reset();
+document.getElementById('whiteboardDropZoneText').innerHTML = 'اضغط هنا لاختيار <b>صورة السبورة (JPG / PNG)</b>';
+
+// Uses dashboard.css green success toast
+showToast('تمت إضافة صورة السبورة بنجاح!', 'success');
+
+await loadWhiteboards(currentWhiteboardSubject);
+
+  } catch (err) {
+    console.error('Whiteboard Upload Error:', err);
+    alert('حدث خطأ أثناء رفع الصورة: ' + err.message);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'تأكيد الرفع';
+  }
+}
+
+// Open Whiteboard Image Preview Modal
+function openWhiteboardPreviewModal(imageUrl, title, subjectKey, uploadedBy) {
+  const modal = document.getElementById('whiteboardPreviewModal');
+  const imgEl = document.getElementById('previewModalImg');
+  const titleEl = document.getElementById('previewModalTitle');
+  const metaEl = document.getElementById('previewModalMeta');
+
+  const subjectLabel = SUBJECT_NAMES[subjectKey] || 'المقرر الدراسي';
+
+  if (modal && imgEl) {
+    imgEl.src = imageUrl;
+    if (titleEl) titleEl.textContent = title;
+    if (metaEl) metaEl.textContent = `مادة ${subjectLabel} • الناشر: ${uploadedBy || 'طالب'}`;
+    modal.classList.add('show');
+  }
+}
+
+function handlePreviewBackdropClick(event) {
+  if (event.target.id === 'whiteboardPreviewModal') {
+    closeModal('whiteboardPreviewModal');
+  }
+}
+
+// Fetch & Render Whiteboards
+async function loadWhiteboards(subjectKey) {
+  currentWhiteboardSubject = subjectKey || 'balagha';
+  const container = document.getElementById('whiteboardsContainer');
+  const viewAllBtn = document.getElementById('whiteboardsViewAllBtn');
+
+  if (!container) return;
+  container.innerHTML = '<p style="text-align: center; color: #64748b; grid-column: 1/-1;">جاري تحميل السبورات...</p>';
+
+  try {
+    const snapshot = await db.collection('whiteboards')
+      .where('subject', '==', currentWhiteboardSubject)
+      .get();
+
+    currentWhiteboardsList = [];
+    if (!snapshot.empty) {
+      snapshot.forEach(doc => {
+        currentWhiteboardsList.push({ id: doc.id, ...doc.data() });
+      });
+    }
+
+    if (currentWhiteboardsList.length === 0) {
+      container.innerHTML = '<p style="text-align: center; color: #94a3b8; grid-column: 1/-1;">لا توجد صور سبورات مضافة لهذا المقرَّر حالياً.</p>';
+      if (viewAllBtn) viewAllBtn.style.display = 'none';
+      return;
+    }
+
+    renderWhiteboardsGrid();
+
+  } catch (err) {
+    console.error('Error fetching whiteboards:', err);
+    container.innerHTML = '<p style="text-align: center; color: #ef4444; grid-column: 1/-1;">حدث خطأ أثناء تحميل السبورات.</p>';
+  }
+}
+
+function renderWhiteboardsGrid() {
+  const container = document.getElementById('whiteboardsContainer');
+  const viewAllBtn = document.getElementById('whiteboardsViewAllBtn');
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  const sessionData = localStorage.getItem('currentUser');
+  const user = sessionData ? JSON.parse(sessionData) : null;
+  const isAdminOrSuper = user && (user.role === 'admin' || user.role === 'superadmin');
+
+  const defaultCount = window.innerWidth <= 600 ? 4 : 3;
+  const visibleItems = isWhiteboardsExpanded ? currentWhiteboardsList : currentWhiteboardsList.slice(0, defaultCount);
+
+  const subjectLabel = SUBJECT_NAMES[currentWhiteboardSubject] || 'المقرر الدراسي';
+
+  visibleItems.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'recording-card';
+    card.style.position = 'relative';
+
+    const adminControls = isAdminOrSuper ? `
+      <div class="card-admin-actions" onclick="event.stopPropagation();" style="position: absolute; top: 8px; left: 8px; z-index: 5; display: flex; gap: 6px;">
+        <button type="button" onclick="openWhiteboardEditModal('${item.id}', '${item.title}', '${item.subject}')" style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.15);" title="تعديل">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+        </button>
+        <button type="button" onclick="deleteWhiteboard('${item.id}')" style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.15);" title="حذف">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+        </button>
+      </div>
+    ` : '';
+
+    // Triggers image preview modal on click
+    card.onclick = () => openWhiteboardPreviewModal(item.imageUrl, item.title, item.subject, item.uploadedBy);
+
+    card.innerHTML = `
+      ${adminControls}
+      <div class="recording-thumb-wrapper">
+        <img src="${item.imageUrl}" alt="${item.title}" class="recording-thumb">
+      </div>
+      <div class="recording-details">
+        <h3>${item.title}</h3>
+        <p>مادة ${subjectLabel} • الناشر: ${item.uploadedBy || 'طالب'}</p>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+
+  if (viewAllBtn) {
+    viewAllBtn.style.display = currentWhiteboardsList.length > defaultCount ? 'inline-block' : 'none';
+    viewAllBtn.textContent = isWhiteboardsExpanded ? 'عرض أقل ←' : '← عرض الكل';
+    viewAllBtn.onclick = (e) => {
+      e.preventDefault();
+      isWhiteboardsExpanded = !isWhiteboardsExpanded;
+      renderWhiteboardsGrid();
+    };
+  }
+}
+
+// Open Edit Modal with current data prefilled
+function openWhiteboardEditModal(docId, title, subject) {
+  document.getElementById('editWhiteboardDocId').value = docId;
+  document.getElementById('editWhiteboardTitleInput').value = title;
+  document.getElementById('editWhiteboardSubjectSelect').value = subject;
+  document.getElementById('whiteboardEditModal').classList.add('show');
+}
+
+// Handle Updating Document in Firestore
+async function handleWhiteboardUpdate(event) {
+  event.preventDefault();
+  const docId = document.getElementById('editWhiteboardDocId').value;
+  const newTitle = document.getElementById('editWhiteboardTitleInput').value.trim();
+  const newSubject = document.getElementById('editWhiteboardSubjectSelect').value;
+
+  try {
+    await db.collection('whiteboards').doc(docId).update({
+  title: newTitle,
+  subject: newSubject,
+  updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+});
+
+closeModal('whiteboardEditModal');
+
+// Uses dashboard.css blue info toast
+showToast('تم تعديل بيانات السبورة بنجاح', 'info');
+
+await loadWhiteboards(currentWhiteboardSubject);
+  } catch (err) {
+    console.error("Error updating whiteboard:", err);
+    alert("Error updating whiteboard item: " + err.message);
+  }
+}
+
+// Handle Deleting Document from Firestore
+function deleteWhiteboard(docId) {
+  pendingDeleteDocId = docId;
+  const modal = document.getElementById('deleteConfirmModal');
+  const confirmBtn = document.getElementById('btnConfirmDelete');
+
+  if (confirmBtn) {
+    confirmBtn.onclick = async () => {
+      if (!pendingDeleteDocId) return;
+
+      try {
+        // 1. Fetch document to get the image URL
+        const docRef = await db.collection('whiteboards').doc(pendingDeleteDocId).get();
+
+        if (docRef.exists) {
+          const data = docRef.data();
+          const imageUrl = data.imageUrl;
+
+          if (imageUrl) {
+            // Extract storage path from URL (e.g. "whiteboards/1791822376191_10viv.jpeg")
+            const urlParts = imageUrl.split('/public-files/');
+            if (urlParts.length > 1) {
+              const filePath = urlParts[1]; // Get relative file path inside bucket
+
+              // 2. Delete actual file from Supabase Storage
+              const { error: storageErr } = await window.supabaseClient.storage
+                .from('public-files')
+                .remove([filePath]);
+
+              if (storageErr) {
+                console.warn("Supabase Storage deletion error:", storageErr);
+              }
+            }
+          }
+        }
+
+        // 3. Delete document record from Firestore
+        await db.collection('whiteboards').doc(pendingDeleteDocId).delete();
+
+closeModal('deleteConfirmModal');
+pendingDeleteDocId = null;
+
+// Uses dashboard.css red error/danger toast
+showToast('تم حذف صورة السبورة بنجاح', 'error');
+
+await loadWhiteboards(currentWhiteboardSubject);
+
+      } catch (err) {
+        console.error("Error deleting whiteboard:", err);
+        alert("حدث خطأ أثناء الحذف: " + err.message);
+      }
+    };
+  }
+
+  if (modal) modal.classList.add('show');
+}
+
+// --- NOTIFICATION HELPERS ---
   function getNotifications() {
     return JSON.parse(localStorage.getItem(STORAGE_NOTIFS_KEY) || '[]');
   }
@@ -747,26 +1164,28 @@
 
 
 
-  // --- CATEGORY SWITCHING & ROUTING ---
-  function switchSubject(sectionId, subjectKey, btnElement) {
-    if (sectionId === 'recordings') {
-      currentSubject = subjectKey;
-    }
-
-    if (btnElement) {
-      const parentContainer = btnElement.closest('.category-buttons');
-      if (parentContainer) {
-        parentContainer.querySelectorAll('.cat-btn').forEach(btn => btn.classList.remove('active'));
-      }
-      btnElement.classList.add('active');
-    }
-
-    if (sectionId === 'recordings') {
-      loadSubjectRecordings(subjectKey);
-    } else {
-      filterStaticSection(sectionId, subjectKey);
-    }
+// --- CATEGORY SWITCHING & ROUTING ---
+function switchSubject(sectionId, subjectKey, btnElement) {
+  if (sectionId === 'recordings') {
+    currentSubject = subjectKey;
   }
+
+  if (btnElement) {
+    const parentContainer = btnElement.closest('.category-buttons');
+    if (parentContainer) {
+      parentContainer.querySelectorAll('.cat-btn').forEach(btn => btn.classList.remove('active'));
+    }
+    btnElement.classList.add('active');
+  }
+
+  if (sectionId === 'recordings') {
+    loadSubjectRecordings(subjectKey);
+  } else if (sectionId === 'whiteboards') {
+    loadWhiteboards(subjectKey); // Fetch/render whiteboards for selected subject
+  } else {
+    filterStaticSection(sectionId, subjectKey);
+  }
+}
 
   function filterStaticSection(sectionId, subjectKey) {
     const container = document.getElementById(sectionId + 'Container');
@@ -1035,29 +1454,26 @@
     // --- INITIALIZATION ---
     // --- INITIALIZATION ---
     document.addEventListener('DOMContentLoaded', async () => {
-      checkUserSession();
-      initSidebarEvents();
-      await loadPresentations();
+  checkUserSession();
+  initSidebarEvents();
+  await loadPresentations();
+  loadSubjectRecordings('tawheed');
+  await loadAssignments();
 
-      loadSubjectRecordings('tawheed');
+  // Load live whiteboards
+  await loadWhiteboards('balagha');
 
-      // LOAD FIRESTORE DUAL-BOX ASSIGNMENTS
-      await loadAssignments();
-
-      // RENDER "COMING SOON!" FOR WHITEBOARDS AND PHOTOS
-      ['whiteboardsContainer', 'photosContainer'].forEach(containerId => {
-        const container = document.getElementById(containerId);
-        if (container) {
-          container.innerHTML = `
-            <div class="coming-soon-placeholder">
-              <div class="coming-soon-badge">قريباً!</div>
-              <p class="coming-soon-text">هذا القسم قيد التطوير والتحديث حالياً، وسيتم إضافة المحتوى قريباً.</p>
-            </div>
-          `;
-        }
-      });
-    });
-
+  // Keep Photos as placeholder for now
+  const photosContainer = document.getElementById('photosContainer');
+  if (photosContainer) {
+    photosContainer.innerHTML = `
+      <div class="coming-soon-placeholder">
+        <div class="coming-soon-badge">قريباً!</div>
+        <p class="coming-soon-text">هذا القسم قيد التطوير والتحديث حالياً، وسيتم إضافة المحتوى قريباً.</p>
+      </div>
+    `;
+  }
+});
 
   // --- LIVE COUNTDOWN TIMER ENGINE ---
 let liveCountdownInterval = null;
@@ -1315,7 +1731,39 @@ function openAssignmentDetails(id, isActive) {
   }, 250);
 }
 
+function showToast(message, type = 'success') {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+
+  // Icon mapping for dashboard.css toast variants
+  const icons = {
+    success: '✓',
+    error: '✕',
+    info: 'ℹ'
+  };
+
+  const toast = document.createElement('div');
+  toast.className = `toast-message ${type}`;
+  toast.innerHTML = `
+    <div class="toast-icon">${icons[type] || '✓'}</div>
+    <span>${message}</span>
+  `;
+
+  container.appendChild(toast);
+
+  // Trigger animation
+  setTimeout(() => toast.classList.add('show'), 10);
+
+  // Auto remove after 3.5 seconds
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, 3500);
+}
+
 </script>
 
+<!-- GLOBAL TOAST NOTIFICATION CONTAINER -->
+<div id="toastContainer"></div>
 </body>
 </html>

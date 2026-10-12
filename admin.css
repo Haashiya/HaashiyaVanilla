@@ -155,19 +155,33 @@
     display: block;
   }
   
-  .tab-header-badge {
-    display: inline-block;
-    background: #1d4ed8;
-    color: #ffffff;
-    font-weight: 700;
-    padding: 8px 16px;
-    border-radius: 8px 8px 0 0;
-    font-size: 0.95rem;
+  .admin-tab-header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end; /* Keeps both elements flush with top of white card */
+    margin-bottom: 0 !important;
   }
   
+  #addChangelogBtn {
+    margin-bottom: 8px !important;
+    border-radius: 10px !important;
+  }
+
+  .tab-header-badge {
+  display: inline-block;
+  background: #1d4ed8;
+  color: #ffffff;
+  font-weight: 700;
+  padding: 8px 18px;
+  border-radius: 12px 12px 0 0;
+  font-size: 0.95rem;
+  margin-bottom: 0 !important;
+}
+  
+  /* Ensure white card connects flush below ribbon */
   .tab-card-body {
     background: #ffffff;
-    border-radius: 0 16px 16px 16px;
+    border-radius: 0 16px 16px 16px; /* Flat top-right corner connects cleanly to ribbon */
     padding: 20px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     min-height: 250px;
@@ -1312,4 +1326,118 @@
   background: #1d4ed8;
   color: #ffffff;
   border-color: #1d4ed8;
+}
+
+/* CHANGELOG BULLETIN STYLES */
+.changelog-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.changelog-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.changelog-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.changelog-header {
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  background: #f8fafc;
+  user-select: none;
+}
+
+.changelog-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.changelog-version-tag {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  direction: ltr;
+}
+
+.changelog-title {
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.changelog-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.changelog-date {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.changelog-toggle-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  transition: transform 0.2s ease;
+}
+
+.changelog-card.open .changelog-toggle-btn {
+  transform: rotate(180deg);
+  background: #1d4ed8;
+  color: #ffffff;
+  border-color: #1d4ed8;
+}
+
+.changelog-body {
+  display: none;
+  padding: 16px 18px;
+  border-top: 1px solid #f1f5f9;
+  background: #ffffff;
+  color: #334155;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.changelog-card.open .changelog-body {
+  display: block;
+}
+
+.changelog-delete-btn {
+  background: none;
+  border: none;
+  color: #ef4444;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+
+.changelog-delete-btn:hover {
+  text-decoration: underline;
 }

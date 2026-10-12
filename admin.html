@@ -95,14 +95,53 @@
       </button>
     </nav>
   
-    <!-- TAB 1: HOME SECTION -->
-    <section id="homeTab" class="tab-section active">
-      <span class="tab-header-badge">لوحة الإحصائيات العامة</span>
-      <div class="tab-card-body">
-        <p style="color: #64748b; font-size: 0.95rem;">مرحباً بك في لوحة تحكم المشرفين. استخدم الأيقونات أعلاه لإدارة المواد التعليمية، والموافقة على الكتب المرفوعة، والاطلاع على قاعدة بيانات الطلاب.</p>
+<!-- TAB 1: HOME SECTION -->
+<section id="homeTab" class="tab-section active">
+  <!-- Top Bar: Blue Ribbon on Right, Green Button on Left -->
+  <div class="admin-tab-header-bar">
+    <span class="tab-header-badge">سجل التحديثات والنظام (Changelog)</span>
+
+    <button id="addChangelogBtn" type="button" class="btn-approve" onclick="openChangelogModal()" style="display: none;">
+      + إضافة تحديث جديد
+    </button>
+  </div>
+
+  <!-- White Card Body -->
+  <div class="tab-card-body">
+    <div id="changelogContainer" class="changelog-list-container">
+      <p style="text-align: center; color: #94a3b8; padding: 20px 0;">جاري تحميل سجل التحديثات...</p>
+    </div>
+  </div>
+</section>
+
+<!-- ADD CHANGELOG MODAL -->
+<div id="changelogModal" class="admin-modal-overlay">
+  <div class="admin-modal-card" style="max-width: 480px; text-align: right;">
+    <button type="button" class="modal-close-x" onclick="closeChangelogModal()" style="position: absolute; left: 16px; top: 16px; background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+    
+    <h3 style="margin: 0 0 16px 0; color: #0f172a; font-size: 1.2rem; font-weight: 800;">إضافة تحديث جديد للنظام</h3>
+    
+    <form id="changelogForm" onsubmit="handleSaveChangelog(event)">
+      <div class="admin-form-group">
+        <label style="display: block; font-weight: 700; margin-bottom: 6px; color: #1e293b; font-size: 0.9rem;">عنوان التحديث</label>
+        <input type="text" id="logTitleInput" class="admin-input" placeholder="مثال: إطلاق ميزة معرض الأرشيف والسبورات" required autocomplete="off">
       </div>
-    </section>
-  
+
+      <div class="admin-form-group">
+        <label style="display: block; font-weight: 700; margin-bottom: 6px; color: #1e293b; font-size: 0.9rem;">رقم الإصدار (Version Tag)</label>
+        <input type="text" id="logVersionInput" class="admin-input" placeholder="v1.2.0" required autocomplete="off">
+      </div>
+
+      <div class="admin-form-group">
+        <label style="display: block; font-weight: 700; margin-bottom: 6px; color: #1e293b; font-size: 0.9rem;">تفاصيل التحديث والمميزات الجديدة</label>
+        <textarea id="logDetailsInput" class="admin-input" rows="4" placeholder="اكتب تفاصيل التحسينات والتغييرات..." style="resize: vertical; min-height: 100px;" required></textarea>
+      </div>
+
+      <button type="submit" class="admin-btn-submit" style="margin-top: 10px; width: 100%; padding: 12px; background: #1d4ed8; color: #ffffff; font-weight: 700; border: none; border-radius: 10px; cursor: pointer;">نشر التحديث</button>
+    </form>
+  </div>
+</div>
+
     <!-- TAB 2: UPLOAD SECTION -->
     <section id="uploadTab" class="tab-section">
      <!-- 1. ASSIGNMENTS BLOCK -->
@@ -584,6 +623,121 @@
     const modal = document.getElementById('accessDeniedModal');
     if (modal) modal.classList.add('show');
   }
+
+  // --- CHANGELOG SYSTEM ---
+async function loadChangelogs() {
+  const container = document.getElementById('changelogContainer');
+  const addBtn = document.getElementById('addChangelogBtn');
+  if (!container) return;
+
+  // Toggle superadmin button visibility
+  if (addBtn) {
+    addBtn.style.display = currentUserRole === 'superadmin' ? 'inline-block' : 'none';
+  }
+
+  try {
+    const snapshot = await db.collection('changelogs').orderBy('createdAt', 'desc').get();
+
+    if (snapshot.empty) {
+      container.innerHTML = '<p style="text-align: center; color: #94a3b8; padding: 20px 0;">لا توجد تحديثات مسجلة حالياً</p>';
+      return;
+    }
+
+    container.innerHTML = '';
+
+    snapshot.forEach(doc => {
+      const log = doc.data();
+      const docId = doc.id;
+      const formattedDate = log.createdAt?.toDate 
+        ? log.createdAt.toDate().toLocaleDateString('ar-EG', { day: 'numeric', month: 'short', year: 'numeric' })
+        : 'حديثاً';
+
+      const deleteOption = currentUserRole === 'superadmin' ? `
+        <button class="changelog-delete-btn" onclick="event.stopPropagation(); deleteChangelog('${docId}')">حذف</button>
+      ` : '';
+
+      const card = document.createElement('div');
+      card.className = 'changelog-card';
+      card.innerHTML = `
+        <div class="changelog-header" onclick="toggleChangelogCard(this)">
+          <div class="changelog-header-right">
+            <span class="changelog-version-tag">${log.version || 'v1.0.0'}</span>
+            <h4 class="changelog-title">${log.title}</h4>
+          </div>
+          <div class="changelog-header-left">
+            <span class="changelog-date">${formattedDate}</span>
+            ${deleteOption}
+            <button type="button" class="changelog-toggle-btn">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+          </div>
+        </div>
+        <div class="changelog-body">${log.details}</div>
+      `;
+      container.appendChild(card);
+    });
+  } catch (err) {
+    console.error("Error loading changelogs:", err);
+    container.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 20px 0;">حدث خطأ أثناء تحميل سجل التحديثات</p>';
+  }
+}
+
+function toggleChangelogCard(headerEl) {
+  const card = headerEl.closest('.changelog-card');
+  if (card) {
+    card.classList.toggle('open');
+  }
+}
+
+function openChangelogModal() {
+  const modal = document.getElementById('changelogModal');
+  if (modal) modal.classList.add('show');
+}
+
+function closeChangelogModal() {
+  const modal = document.getElementById('changelogModal');
+  if (modal) modal.classList.remove('show');
+  document.getElementById('changelogForm').reset();
+}
+
+async function handleSaveChangelog(e) {
+  e.preventDefault();
+
+  const title = document.getElementById('logTitleInput').value.trim();
+  const version = document.getElementById('logVersionInput').value.trim();
+  const details = document.getElementById('logDetailsInput').value.trim();
+
+  if (!title || !version || !details) return;
+
+  try {
+    await db.collection('changelogs').add({
+      title,
+      version,
+      details,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    closeChangelogModal();
+    showToast('تم نشر التحديث بنجاح! 🎉', 'success');
+    await loadChangelogs();
+  } catch (err) {
+    console.error("Save log error:", err);
+    showToast('حدث خطأ أثناء حفظ التحديث', 'error');
+  }
+}
+
+async function deleteChangelog(docId) {
+  if (!confirm('هل أنت تأكد من رغبتك في حذف هذا التحديث؟')) return;
+
+  try {
+    await db.collection('changelogs').doc(docId).delete();
+    showToast('تم حذف التحديث بنجاح', 'success');
+    await loadChangelogs();
+  } catch (err) {
+    console.error("Delete log error:", err);
+    showToast('حدث خطأ أثناء الحذف', 'error');
+  }
+}
 
   async function verifyAdminAccess() {
     const sessionData = localStorage.getItem('currentUser');
@@ -1125,6 +1279,7 @@
   // --- DOM INITIALIZATION ---
   document.addEventListener('DOMContentLoaded', async () => {
     await verifyAdminAccess();
+    loadChangelogs();
     loadAdminEducationalBooks();
     loadAdminAssignments();
     listenToPendingApprovals();
