@@ -124,7 +124,6 @@ function startBackgroundChatListener() {
 
   chatUnsubscribe = firestoreDb.collection('admin_chat')
     .orderBy('timestamp', 'asc')
-    .limitToLast(50)
     .onSnapshot((snapshot) => {
       if (!container) return;
 
