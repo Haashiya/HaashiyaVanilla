@@ -11,6 +11,31 @@ let isChatSending = false;
 let chatMessagesCache = {};      // msgId -> message data (used for edit/delete lookups)
 let unreadChatCount = 0;
 
+// Accessible color palette for sender names (avoids light yellows / bright blues that blend into bubbles)
+const SENDER_NAME_COLORS = [
+  '#059669', // Emerald / Green
+  '#d97706', // Amber / Dark Orange
+  '#7c3aed', // Purple
+  '#db2777', // Pink
+  '#0284c7', // Cyan / Sky Blue
+  '#ea580c', // Dark Orange
+  '#9333ea', // Violet
+  '#0891b2', // Teal
+  '#c026d3', // Fuchsia
+  '#4d7c0f'  // Lime / Forest
+];
+
+function getSenderColor(username) {
+  if (!username) return SENDER_NAME_COLORS[0];
+  let hash = 0;
+  const str = username.toLowerCase().trim();
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % SENDER_NAME_COLORS.length;
+  return SENDER_NAME_COLORS[index];
+}
+
 // 1. Toggle Slide-Out Drawer
 function toggleAdminChatDrawer() {
   closeOpenSwipeMenu();
@@ -257,6 +282,18 @@ function startBackgroundChatListener() {
         bubbleRelative.appendChild(bubble);
         bubbleRelative.appendChild(actionGroup);
         wrapper.appendChild(bubbleRelative);
+
+        // Get a unique, high-contrast color for the sender
+const senderColor = getSenderColor(msgSender);
+
+// 3. Message Bubble
+bubble.className = `chat-bubble ${isMine ? 'mine' : 'other'} ${isMentioned ? 'mentioned' : ''}`;
+bubble.innerHTML = `
+  ${!isMine ? `<span class="chat-sender-tag" style="color: ${senderColor} !important;">${formattedSenderName}</span>` : ''}
+  ${quotedHTML}
+  <div class="chat-text-content">${styledText}</div>
+  <span class="chat-time-tag">${editedTagHTML}${timeStr}</span>
+`;
 
         // Touch Gestures for Mobile
         attachSwipeGestures(wrapper, bubble, msgId, formattedSenderName, textContent, dateObj, isMine, replyPreviewText);

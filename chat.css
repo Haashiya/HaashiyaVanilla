@@ -196,6 +196,8 @@
     font-weight: 700;
     color: #64748b;
     margin-bottom: 3px;
+    text-align: left !important;
+  direction: ltr !important;
   }
   
   .chat-time-tag {
