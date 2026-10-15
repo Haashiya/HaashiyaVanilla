@@ -150,6 +150,7 @@ function startBackgroundChatListener() {
 
       snapshot.forEach(doc => {
         const msg = doc.data();
+        console.log("Chat doc data:", msg);
         const msgId = doc.id;
         const msgSender = (msg.sender || 'admin').toLowerCase().replace(/\s+/g, '').trim();
         const isMine = msgSender === cleanMyUsername;
@@ -213,22 +214,41 @@ function startBackgroundChatListener() {
         const bubbleRelative = document.createElement('div');
         bubbleRelative.className = 'chat-bubble-relative';
 
-        // 3. Message Bubble
+        // 3. Message Bubble Container
         const bubble = document.createElement('div');
-        bubble.className = `chat-bubble ${isMine ? 'mine' : 'other'} ${isMentioned ? 'mentioned' : ''}`;
-        bubble.innerHTML = `
-          ${!isMine ? `<span class="chat-sender-tag">${formattedSenderName}</span>` : ''}
-          ${quotedHTML}
-          <div class="chat-text-content">${styledText}</div>
-          <span class="chat-time-tag">${editedTagHTML}${timeStr}</span>
-        `;
+        const senderColor = getSenderColor(msgSender);
 
-        // Attachments (images / videos / files)
-        if (attachments.length) {
-          const textEl = bubble.querySelector('.chat-text-content');
-          bubble.insertBefore(buildAttachmentsElement(attachments), textEl);
-          if (!textContent) textEl.style.display = 'none';
+        bubble.className = `chat-bubble ${isMine ? 'mine' : 'other'} ${isMentioned ? 'mentioned' : ''}`;
+
+        // Build HTML components
+        let innerContentHTML = '';
+
+        if (!isMine) {
+          innerContentHTML += `<span class="chat-sender-tag" style="color: ${senderColor} !important;">${formattedSenderName}</span>`;
         }
+
+        if (quotedHTML) {
+          innerContentHTML += quotedHTML;
+        }
+
+        if (textContent.trim()) {
+          innerContentHTML += `<div class="chat-text-content">${styledText}</div>`;
+        }
+
+        // Set initial HTML structure
+        bubble.innerHTML = innerContentHTML;
+
+        // Render Attachments if present
+        if (attachments && attachments.length > 0) {
+          const attachmentsNode = buildAttachmentsElement(attachments);
+          bubble.appendChild(attachmentsNode);
+        }
+
+        // Always append time tag at the bottom
+        const timeTag = document.createElement('span');
+        timeTag.className = 'chat-time-tag';
+        timeTag.innerHTML = `${editedTagHTML}${timeStr}`;
+        bubble.appendChild(timeTag);
 
         // 4. Action Buttons Group
         const actionGroup = document.createElement('div');
@@ -283,7 +303,6 @@ function startBackgroundChatListener() {
         wrapper.appendChild(bubbleRelative);
 
         // Get a unique, high-contrast color for the sender
-const senderColor = getSenderColor(msgSender);
 
 // 3. Message Bubble
 bubble.className = `chat-bubble ${isMine ? 'mine' : 'other'} ${isMentioned ? 'mentioned' : ''}`;
@@ -324,7 +343,6 @@ async function handleSendAdminMessage(e) {
   const isEditing = !!editingMessageId;
 
   if (isEditing) {
-    // An attachment-only message may have its caption cleared
     const hasAttachments = (chatMessagesCache[editingMessageId]?.attachments || []).length > 0;
     if (!text && !hasAttachments) return;
   } else if (!text && pendingAttachments.length === 0) {
@@ -348,6 +366,13 @@ async function handleSendAdminMessage(e) {
       let attachments = [];
       if (pendingAttachments.length) {
         attachments = await uploadPendingAttachments();
+        
+        // Safety Guard: If user tried sending ONLY files but uploads failed completely
+        if (!text && attachments.length === 0) {
+          showChatToast('فشل رفع الملفات، تعذر إرسال الرسالة');
+          setChatSending(false);
+          return;
+        }
       }
 
       const payload = {
@@ -379,7 +404,7 @@ async function handleSendAdminMessage(e) {
     input.style.height = '42px';
   } catch (err) {
     console.error("Error sending or editing message:", err);
-    showChatToast(pendingAttachments.length ? 'فشل رفع الملفات، حاول مرة أخرى' : 'حدث خطأ أثناء حفظ الرسالة');
+    showChatToast(pendingAttachments.length ? 'فشل رفع الملفات، تحقق من إعدادات Supabase Storage' : 'حدث خطأ أثناء حفظ الرسالة');
   } finally {
     setChatSending(false);
   }
@@ -864,6 +889,17 @@ function formatFileSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function isSafeAttachmentUrl(url) {
+  if (!url) return false;
+  if (url.startsWith('blob:') || url.startsWith('data:')) return true;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+  } catch (_) {
+    return false;
+  }
+}
+
 function isSafeHttpsUrl(url) {
   try {
     return new URL(url).protocol === 'https:';
@@ -1191,40 +1227,83 @@ function buildFileCard(att) {
 function buildAttachmentsElement(attachments) {
   const wrap = document.createElement('div');
   wrap.className = 'chat-attachments';
+  wrap.style.display = 'flex';
+  wrap.style.flexDirection = 'column';
+  wrap.style.gap = '6px';
+  wrap.style.marginTop = '4px';
+  wrap.style.marginBottom = '4px';
 
   attachments.forEach(att => {
-    if (!att || !isSafeHttpsUrl(att.url)) return;
+    if (!att || (!att.url && !att.fileUrl)) return;
+
+    const fileUrl = att.url || att.fileUrl;
+    const fileName = att.name || att.fileName || 'ملف مرفق';
+
+    // 1. Detect if image by kind, file type, or extension
+    const ext = getFileExt(fileName || fileUrl);
+    let kind = att.kind || getAttachmentKind(ext);
+    
+    if (!kind) {
+      if ((att.type && att.type.startsWith('image/')) || /\.(jpg|jpeg|png|webp|gif|avif)$/i.test(fileUrl)) {
+        kind = 'image';
+      } else if ((att.type && att.type.startsWith('video/')) || /\.(mp4|mov|webm)$/i.test(fileUrl)) {
+        kind = 'video';
+      } else {
+        kind = 'file';
+      }
+    }
 
     let node;
-    if (att.kind === 'image') {
+
+    if (kind === 'image') {
       const img = document.createElement('img');
       img.className = 'chat-att-img';
-      img.alt = att.name || '';
+      img.alt = fileName;
       img.decoding = 'async';
-      // Reserve space up-front so the list doesn't jump while images load
-      img.style.aspectRatio = (att.width && att.height) ? `${att.width} / ${att.height}` : '4 / 3';
-      img.src = att.url;
+      img.style.maxWidth = '100%';
+      img.style.maxHeight = '240px';
+      img.style.borderRadius = '10px';
+      img.style.objectFit = 'cover';
+      img.style.cursor = 'pointer';
+      img.style.display = 'block';
+
+      if (att.width && att.height) {
+        img.style.aspectRatio = `${att.width} / ${att.height}`;
+      }
+
+      img.src = fileUrl;
+
       img.addEventListener('click', (e) => {
         e.stopPropagation();
-        openChatLightbox(att.url, att.name);
+        openChatLightbox(fileUrl, fileName);
       });
-      img.addEventListener('error', () => node.replaceWith(buildFileCard(att)));
+
+      img.addEventListener('error', () => {
+        console.warn('Image failed to load, falling back to file card:', fileUrl);
+        const card = buildFileCard({ url: fileUrl, name: fileName, size: att.size });
+        if (node && node.parentNode) {
+          node.parentNode.replaceChild(card, node);
+        }
+      });
+
       node = img;
-    } else if (att.kind === 'video') {
+    } else if (kind === 'video') {
       const video = document.createElement('video');
       video.className = 'chat-att-video';
       video.controls = true;
       video.preload = 'metadata';
+      video.style.maxWidth = '100%';
+      video.style.borderRadius = '10px';
       video.setAttribute('playsinline', '');
-      video.src = `${att.url}#t=0.1`;
+      video.src = `${fileUrl}#t=0.1`;
       video.addEventListener('click', (e) => e.stopPropagation());
-      video.addEventListener('error', () => node.replaceWith(buildFileCard(att)));
+
       node = video;
     } else {
-      node = buildFileCard(att);
+      node = buildFileCard({ url: fileUrl, name: fileName, size: att.size });
     }
 
-    wrap.appendChild(node);
+    if (node) wrap.appendChild(node);
   });
 
   return wrap;

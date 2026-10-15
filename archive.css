@@ -291,6 +291,31 @@
   box-sizing: border-box;
 }
 
+.upload-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(15, 23, 42, 0.55); /* Dark semi-transparent overlay */
+  backdrop-filter: blur(6px);              /* Full screen blur */
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 99999;                          /* Covers navbar & all page elements */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.upload-modal-overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+
 /* Modal Close Button Adjustment */
 .video-modal-card .modal-close-x {
   position: absolute;
@@ -754,6 +779,17 @@
 .btn-circle-action:hover {
   transform: scale(1.08);
   background-color: #1d4ed8; /* Highlight blue on hover */
+}
+
+/* Custom Hover States for Admin Action Buttons */
+.btn-circle-action.btn-action-edit:hover {
+  background-color: #1d4ed8 !important; /* Brand Blue */
+  transform: scale(1.08);
+}
+
+.btn-circle-action.btn-action-delete:hover {
+  background-color: #dc2626 !important; /* Danger Red */
+  transform: scale(1.08);
 }
 
 /* --- MOBILE RESPONSIVE FIX FOR PRESENTATIONS (< 600px) --- */

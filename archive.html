@@ -235,11 +235,14 @@
 </section>
 
     <!-- 3. PRESENTATIONS SECTION -->
-<section id="presentations" class="main-card-section">
-  <div class="section-header">
-    <h2 class="section-title">العرض التقديمي</h2>
-    <a href="#" class="view-all-link">&rarr; عرض الكل</a>
-  </div>
+    <section id="presentations" class="main-card-section">
+      <div class="section-header">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <h2 class="section-title">العرض التقديمي</h2>
+          <button class="btn-upload-whiteboard" onclick="openPresentationUploadModal()">+ إضافة عرض تقديمي</button>
+        </div>
+        <a href="#" class="view-all-link">&rarr; عرض الكل</a>
+      </div>
 
   <div class="archive-filter-bar">
     <select class="level-select">
@@ -254,6 +257,7 @@
   </div>
 
   <div id="presentationsContainer"></div>
+
 </section>
 
         <!-- 4. WHITEBOARDS SECTION -->
@@ -567,6 +571,8 @@
   let isWhiteboardsExpanded = false;
   let currentWhiteboardSubject = 'balagha';
   let pendingDeleteDocID = null;
+  let pendingDeletePresentationDocId = null;
+  let currentPresentationSubject = 'balagha';
 
   // --- SIDEBAR DRAWER LOGIC ---
   function toggleSidebar() {
@@ -1166,10 +1172,6 @@ await loadWhiteboards(currentWhiteboardSubject);
 
 // --- CATEGORY SWITCHING & ROUTING ---
 function switchSubject(sectionId, subjectKey, btnElement) {
-  if (sectionId === 'recordings') {
-    currentSubject = subjectKey;
-  }
-
   if (btnElement) {
     const parentContainer = btnElement.closest('.category-buttons');
     if (parentContainer) {
@@ -1179,9 +1181,13 @@ function switchSubject(sectionId, subjectKey, btnElement) {
   }
 
   if (sectionId === 'recordings') {
+    currentSubject = subjectKey;
     loadSubjectRecordings(subjectKey);
   } else if (sectionId === 'whiteboards') {
-    loadWhiteboards(subjectKey); // Fetch/render whiteboards for selected subject
+    loadWhiteboards(subjectKey);
+  } else if (sectionId === 'presentations') {
+    currentPresentationSubject = subjectKey;
+    renderPresentationsGrid(subjectKey);
   } else {
     filterStaticSection(sectionId, subjectKey);
   }
@@ -1548,63 +1554,410 @@ async function loadPresentations() {
   }
 }
 
-function renderPresentationsGrid() {
+function renderPresentationsGrid(filterCategory = 'all') {
   const container = document.getElementById('presentationsContainer');
   const viewAllBtn = document.querySelector("#presentations .view-all-link");
   if (!container) return;
 
   container.innerHTML = '';
 
-  // Slice array to 3 items if not expanded
-  const visiblePresentations = isPresentationsExpanded ? allPresentations : allPresentations.slice(0, 3);
+  const sessionData = localStorage.getItem('currentUser');
+  const user = sessionData ? JSON.parse(sessionData) : null;
+  const isAdminOrSuper = user && (user.role === 'admin' || user.role === 'superadmin');
 
-  visiblePresentations.forEach(item => {
-    container.innerHTML += `
-      <div class="presentation-card" data-category="${item.category || 'balagha'}">
-        
-        <!-- RIGHT GROUP: THUMBNAIL & TEXT DETAILS -->
-        <div class="presentation-right-group">
-          <img src="${item.thumbnail || 'assets/images/web/default_cover.png'}" alt="cover" class="presentation-thumb">
-          <div class="presentation-info">
-            <h3 class="presentation-title">${item.title}</h3>
-            <p class="presentation-subtitle">${item.subtitle}</p>
-            <p class="presentation-subject">${item.subject}</p>
-          </div>
+  // Filter list based on selected category chip
+  const filteredList = (filterCategory === 'all' || !filterCategory) 
+    ? allPresentations 
+    : allPresentations.filter(item => item.category === filterCategory);
+
+  if (filteredList.length === 0) {
+    container.innerHTML = '<p style="text-align:center; color:#94a3b8; padding:30px 0; width:100%;">لا توجد عروض تقديمية مضافة لهذا المقرَّر حالياً.</p>';
+    if (viewAllBtn) viewAllBtn.style.display = 'none';
+    return;
+  }
+
+  const visiblePresentations = isPresentationsExpanded ? filteredList : filteredList.slice(0, 3);
+
+// Inside renderPresentationsGrid()
+visiblePresentations.forEach(item => {
+  const adminControls = (isAdminOrSuper && item.id) ? `
+    <button type="button" class="btn-circle-action btn-action-edit" onclick="openPresentationEditModal('${item.id}', '${item.title}', '${item.subtitle}', '${item.category}')" title="تعديل العرض">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+      </svg>
+    </button>
+    <button type="button" class="btn-circle-action btn-action-delete" onclick="deletePresentation('${item.id}')" title="حذف العرض">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="3 6 5 6 21 6"></polyline>
+        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+      </svg>
+    </button>
+  ` : '';
+
+  const filename = `${item.title.replace(/\s+/g, '_')}.pdf`;
+
+  container.innerHTML += `
+    <div class="presentation-card" data-category="${item.category || 'balagha'}">
+      <div class="presentation-right-group">
+        <img src="${item.thumbnail || 'assets/images/web/default_cover.png'}" alt="cover" class="presentation-thumb">
+        <div class="presentation-info">
+          <h3 class="presentation-title">${item.title}</h3>
+          <p class="presentation-subtitle">${item.subtitle}</p>
+          <p class="presentation-subject">${item.subject}</p>
         </div>
-
-        <!-- LEFT GROUP: VIEW & DOWNLOAD BUTTONS -->
-        <div class="presentation-left-actions">
-          <!-- VIEW PREVIEW BUTTON -->
-          <button type="button" class="btn-circle-action" onclick="window.open('${item.fileUrl}', '_blank')" title="عرض العرض التقديمي">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-              <circle cx="12" cy="12" r="3"></circle>
-            </svg>
-          </button>
-
-          <!-- DOWNLOAD FILE BUTTON -->
-          <a href="${item.fileUrl}" download class="btn-circle-action" title="تحميل الملف">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-          </a>
-        </div>
-
       </div>
-    `;
-  });
 
-  // Toggle button label
+      <div class="presentation-left-actions">
+        ${adminControls}
+
+        <!-- VIEW PREVIEW BUTTON -->
+        <button type="button" class="btn-circle-action" onclick="window.open('${item.fileUrl}', '_blank')" title="عرض العرض التقديمي">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+        </button>
+
+        <!-- DIRECT FILE DOWNLOAD BUTTON -->
+        <button type="button" class="btn-circle-action" onclick="downloadFile(event, '${item.fileUrl}', '${filename}')" title="تحميل الملف">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  `;
+});
+
   if (viewAllBtn) {
+    viewAllBtn.style.display = filteredList.length > 3 ? "inline-block" : "none";
     viewAllBtn.textContent = isPresentationsExpanded ? "عرض أقل ←" : "← عرض الكل";
   }
 }
 
+function extractOrdinalNum(title) {
+  const map = {
+    'الأولى': '1', 'الثانية': '2', 'الثالثة': '3', 'الرابعة': '4',
+    'الخامسة': '5', 'السادسة': '6', 'السابعة': '7', 'الثامنة': '8',
+    'التاسعة': '9', 'العاشرة': '10', 'الحادية عشرة': '11', 'الثانية عشرة': '12'
+  };
+  for (const [key, val] of Object.entries(map)) {
+    if (title.includes(key)) return val;
+  }
+  return '1';
+}
+
+function openPresentationEditModal(docId, title, subtitle, category) {
+  document.getElementById('editPresentationDocId').value = docId;
+  document.getElementById('editPresentationTitleInput').value = subtitle;
+  document.getElementById('editPresentationSubjectSelect').value = category || 'balagha';
+  
+  // Auto-select extracted group number and section
+  document.getElementById('editPresentationGroupNum').value = extractOrdinalNum(title);
+  document.getElementById('editPresentationGender').value = title.includes('[طالبات]') ? 'طالبات' : 'طلاب';
+
+  document.getElementById('presentationEditModal').classList.add('show');
+}
+
+// Converts group numbers 1-12 to Arabic ordinal text
+function getArabicOrdinal(num) {
+  const ordinals = {
+    1: 'الأولى',
+    2: 'الثانية',
+    3: 'الثالثة',
+    4: 'الرابعة',
+    5: 'الخامسة',
+    6: 'السادسة',
+    7: 'السابعة',
+    8: 'الثامنة',
+    9: 'التاسعة',
+    10: 'العاشرة',
+    11: 'الحادية عشرة',
+    12: 'الثانية عشرة'
+  };
+  return ordinals[parseInt(num, 10)] || `المجموعة ${num}`;
+}
+
 function toggleViewAllPresentations() {
   isPresentationsExpanded = !isPresentationsExpanded;
-  renderPresentationsGrid();
+  renderPresentationsGrid(currentPresentationSubject);
+}
+
+// 1. Open Presentation Modal
+function openPresentationUploadModal() {
+  const sessionData = localStorage.getItem('currentUser');
+  if (!sessionData) {
+    alert('يرجى تسجيل الدخول أولاً لتمكن من إضافة العروض التقديمية');
+    return;
+  }
+  document.getElementById('presentationUploadModal').classList.add('show');
+}
+
+// 2. File Input Label Updaters
+function updatePresentationPdfName(input) {
+  const label = document.getElementById('pdfDropZoneText');
+  if (input.files && input.files[0]) {
+    label.innerHTML = `الملف المحدد: <b>${input.files[0].name}</b>`;
+  }
+}
+
+function updatePresentationCoverName(input) {
+  const label = document.getElementById('coverDropZoneText');
+  if (input.files && input.files[0]) {
+    label.innerHTML = `الصورة المحددة: <b>${input.files[0].name}</b>`;
+  }
+}
+
+// Forces browser download for cross-origin files (Supabase Storage PDFs)
+async function downloadFile(event, fileUrl, defaultFilename) {
+  event.preventDefault();
+  
+  try {
+    const response = await fetch(fileUrl);
+    if (!response.ok) throw new Error('Failed to fetch file');
+    
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = defaultFilename || 'presentation.pdf';
+    document.body.appendChild(link);
+    link.click();
+    
+    // Clean up memory
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
+    
+    showToast('جاري تحميل الملف...', 'info');
+  } catch (err) {
+    console.error('Download error:', err);
+    // Fallback: opens in new tab if blob fetch fails
+    window.open(fileUrl, '_blank');
+  }
+}
+
+async function handlePresentationUpload(event) {
+  event.preventDefault();
+
+  const pdfInput = document.getElementById('presentationPdfInput');
+  const coverInput = document.getElementById('presentationCoverInput');
+  const groupNum = document.getElementById('presentationGroupNum').value;
+  const gender = document.getElementById('presentationGender').value;
+  const subjectKey = document.getElementById('presentationSubjectSelect').value;
+  const titleInput = document.getElementById('presentationTitleInput').value.trim();
+  const submitBtn = document.getElementById('btnSubmitPresentation');
+
+  if (!pdfInput.files || !pdfInput.files[0]) {
+    alert('يرجى اختيار ملف العرض التقديمي (PDF) أولاً');
+    return;
+  }
+
+  const pdfFile = pdfInput.files[0];
+  const coverFile = coverInput.files && coverInput.files[0] ? coverInput.files[0] : null;
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'جاري الرفع...';
+
+  try {
+    // 1. Upload PDF file to Supabase Storage
+    const pdfExt = pdfFile.name.split('.').pop();
+    const pdfFileName = `presentations/pdf_${Date.now()}_${Math.random().toString(36).substring(7)}.${pdfExt}`;
+
+    const { error: pdfError } = await window.supabaseClient.storage
+      .from('public-files')
+      .upload(pdfFileName, pdfFile);
+
+    if (pdfError) throw pdfError;
+
+    const { data: pdfUrlData } = window.supabaseClient.storage
+      .from('public-files')
+      .getPublicUrl(pdfFileName);
+
+    let coverUrl = 'assets/images/web/default_cover.png';
+
+    // 2. Upload optional Cover Image to Supabase Storage
+    if (coverFile) {
+      const coverExt = coverFile.name.split('.').pop();
+      const coverFileName = `presentations/cover_${Date.now()}_${Math.random().toString(36).substring(7)}.${coverExt}`;
+
+      const { error: coverError } = await window.supabaseClient.storage
+        .from('public-files')
+        .upload(coverFileName, coverFile);
+
+      if (coverError) throw coverError;
+
+      const { data: coverUrlData } = window.supabaseClient.storage
+        .from('public-files')
+        .getPublicUrl(coverFileName);
+
+      coverUrl = coverUrlData.publicUrl;
+    }
+
+    const formattedTitle = `المجموعة ${getArabicOrdinal(groupNum)} [${gender}]`;
+    const subjectName = SUBJECT_NAMES[subjectKey] || 'المقرر الدراسي';
+
+    // 3. Save Document to Firestore
+    await db.collection('presentations').add({
+      title: formattedTitle,
+      subtitle: titleInput,
+      subject: `مادة ${subjectName}`,
+      category: subjectKey,
+      fileUrl: pdfUrlData.publicUrl,
+      thumbnail: coverUrl,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    closeModal('presentationUploadModal');
+    document.getElementById('presentationUploadForm').reset();
+    document.getElementById('pdfDropZoneText').innerHTML = 'اضغط هنا لاختيار <b>ملف العرض (PDF)</b>';
+    document.getElementById('coverDropZoneText').innerHTML = 'اضغط هنا لاختيار <b>صورة الغلاف</b>';
+
+    showToast('تمت إضافة العرض التقديمي بنجاح!', 'success');
+    await loadPresentations();
+
+  } catch (err) {
+    console.error('Presentation Upload Error:', err);
+    alert('حدث خطأ أثناء الرفع: ' + err.message);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'تأكيد الرفع';
+  }
+}
+
+// 3. Form Submission Handler
+async function handlePresentationUpdate(event) {
+  event.preventDefault();
+  
+  const docId = document.getElementById('editPresentationDocId').value;
+  const groupNum = document.getElementById('editPresentationGroupNum').value;
+  const gender = document.getElementById('editPresentationGender').value;
+  const subjectKey = document.getElementById('editPresentationSubjectSelect').value;
+  const newSubtitle = document.getElementById('editPresentationTitleInput').value.trim();
+
+  const formattedTitle = `المجموعة ${getArabicOrdinal(groupNum)} [${gender}]`;
+  const subjectName = SUBJECT_NAMES[subjectKey] || 'المقرر الدراسي';
+
+  try {
+    await db.collection('presentations').doc(docId).update({
+      title: formattedTitle,
+      subtitle: newSubtitle,
+      subject: `مادة ${subjectName}`,
+      category: subjectKey,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    closeModal('presentationEditModal');
+    showToast('تم تعديل العرض التقديمي بنجاح', 'info');
+    await loadPresentations();
+
+  } catch (err) {
+    console.error('Error updating presentation:', err);
+    alert('حدث خطأ أثناء التعديل: ' + err.message);
+  }
+}
+
+function deletePresentation(docId) {
+  pendingDeletePresentationDocId = docId;
+  const modal = document.getElementById('presentationDeleteConfirmModal');
+  const confirmBtn = document.getElementById('btnConfirmDeletePresentation');
+
+  if (confirmBtn) {
+    confirmBtn.onclick = async () => {
+      if (!pendingDeletePresentationDocId) return;
+
+      try {
+        const docRef = await db.collection('presentations').doc(pendingDeletePresentationDocId).get();
+
+        if (docRef.exists) {
+          const data = docRef.data();
+
+          // Delete PDF file from Supabase Storage if path exists
+          if (data.fileUrl && data.fileUrl.includes('/public-files/')) {
+            const pdfPath = data.fileUrl.split('/public-files/')[1];
+            await window.supabaseClient.storage.from('public-files').remove([pdfPath]);
+          }
+
+          // Delete cover image from Supabase Storage if path exists
+          if (data.thumbnail && data.thumbnail.includes('/public-files/')) {
+            const coverPath = data.thumbnail.split('/public-files/')[1];
+            await window.supabaseClient.storage.from('public-files').remove([coverPath]);
+          }
+        }
+
+        // Delete Firestore document
+        await db.collection('presentations').doc(pendingDeletePresentationDocId).delete();
+
+        closeModal('presentationDeleteConfirmModal');
+        pendingDeletePresentationDocId = null;
+        showToast('تم حذف العرض التقديمي بنجاح', 'error');
+
+        await loadPresentations();
+
+      } catch (err) {
+        console.error('Error deleting presentation:', err);
+        alert('حدث خطأ أثناء الحذف: ' + err.message);
+      }
+    };
+  }
+
+  if (modal) modal.classList.add('show');
+}
+
+// 4. Updated Load Presentations (Fetch from Firestore with JSON fallback)
+async function loadPresentations() {
+  const container = document.getElementById('presentationsContainer');
+  const viewAllBtn = document.querySelector("#presentations .view-all-link");
+  if (!container) return;
+
+  try {
+    let firestoreItems = [];
+    let jsonItems = [];
+
+    // 1. Fetch uploaded items from Firestore
+    try {
+      const snapshot = await db.collection('presentations').get();
+      if (!snapshot.empty) {
+        snapshot.forEach(doc => {
+          firestoreItems.push({ id: doc.id, ...doc.data() });
+        });
+      }
+    } catch (e) {
+      console.warn("Firestore presentations fetch warning:", e);
+    }
+
+    // 2. Fetch static local items from JSON
+    try {
+      const res = await fetch('data/presentations.json');
+      const rawJson = await res.json();
+      // Ensure json fallback items default to 'balagha' category if unspecified
+      jsonItems = rawJson.map(item => ({
+        ...item,
+        category: item.category || 'balagha'
+      }));
+    } catch (e) {
+      console.warn("presentations.json fetch warning:", e);
+    }
+
+    // Combine Firestore uploaded items first, followed by static items
+    allPresentations = [...firestoreItems, ...jsonItems];
+    isPresentationsExpanded = false;
+
+    if (allPresentations.length === 0) {
+      container.innerHTML = '<p style="text-align:center; color:#94a3b8; padding:20px 0;">لا توجد العروض التقديمية متاحة حالياً</p>';
+      if (viewAllBtn) viewAllBtn.style.display = "none";
+      return;
+    }
+
+    // Render grid strictly for the active active tab ('balagha' by default)
+    renderPresentationsGrid(currentPresentationSubject);
+
+  } catch (err) {
+    console.error('Error loading presentations:', err);
+  }
 }
 
 // Remove blank/invisible screen state when navigating using browser Back/Forward buttons
@@ -1765,5 +2118,175 @@ function showToast(message, type = 'success') {
 
 <!-- GLOBAL TOAST NOTIFICATION CONTAINER -->
 <div id="toastContainer"></div>
+
+<!-- PRESENTATION UPLOAD MODAL -->
+<div id="presentationUploadModal" class="upload-modal-overlay">
+  <div class="upload-modal-card" style="max-width: 520px; max-height: 90vh; overflow-y: auto;">
+    <button class="modal-close-x" onclick="closeModal('presentationUploadModal')">&times;</button>
+    <h3 class="upload-modal-title">إضافة عرض تقديمي</h3>
+    <p class="upload-modal-subtitle">حدد رقم المجموعة والنوع وقم برفع ملف العرض والصورة الغلاف</p>
+
+    <form id="presentationUploadForm" onsubmit="handlePresentationUpload(event)">
+      <!-- GROUP SELECTION & GENDER TOGGLE -->
+      <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+        <div style="flex: 1;">
+          <label style="font-weight: 700; font-size: 0.85rem; display: block; margin-bottom: 4px;">المجموعة</label>
+          <div style="position: relative;">
+            <select id="presentationGroupNum" class="modal-select" required style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-family: inherit; appearance: none; -webkit-appearance: none; background: #ffffff url('data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'16\' height=\'16\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2364748b\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><polyline points=\'6 9 12 15 18 9\'/></svg>') no-repeat left 10px center; cursor: pointer;">
+              <option value="1">المجموعة الأولى</option>
+              <option value="2">المجموعة الثانية</option>
+              <option value="3">المجموعة الثالثة</option>
+              <option value="4">المجموعة الرابعة</option>
+              <option value="5">المجموعة الخامسة</option>
+              <option value="6">المجموعة السادسة</option>
+              <option value="7">المجموعة السابعة</option>
+              <option value="8">المجموعة الثامنة</option>
+              <option value="9">المجموعة التاسعة</option>
+              <option value="10">المجموعة العاشرة</option>
+              <option value="11">المجموعة الحادية عشرة</option>
+              <option value="12">المجموعة الثانية عشرة</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="flex: 1;">
+          <label style="font-weight: 700; font-size: 0.85rem; display: block; margin-bottom: 4px;">القسم</label>
+          <div style="position: relative;">
+            <select id="presentationGender" class="modal-select" required style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-family: inherit; appearance: none; -webkit-appearance: none; background: #ffffff url('data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'16\' height=\'16\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2364748b\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><polyline points=\'6 9 12 15 18 9\'/></svg>') no-repeat left 10px center; cursor: pointer;">
+              <option value="طلاب">طلاب</option>
+              <option value="طالبات">طالبات</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUBJECT SELECT -->
+      <div class="modal-field" style="margin-bottom: 12px;">
+        <label style="font-weight: 700; font-size: 0.85rem; display: block; margin-bottom: 4px;">المادة الدراسية</label>
+        <div style="position: relative;">
+          <select id="presentationSubjectSelect" class="modal-select" required style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-family: inherit; appearance: none; -webkit-appearance: none; background: #ffffff url('data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'16\' height=\'16\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2364748b\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><polyline points=\'6 9 12 15 18 9\'/></svg>') no-repeat left 10px center; cursor: pointer;">
+            <option value="balagha">البلاغة</option>
+            <option value="indonesian">اللغة الإندونيسية</option>
+            <option value="pkn">الوطنية الإندونيسية</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- TITLE INPUT -->
+      <div class="modal-field" style="margin-bottom: 12px;">
+        <label style="font-weight: 700; font-size: 0.85rem; display: block; margin-bottom: 4px;">عنوان الموضوع / العنوان الفرعي</label>
+        <input type="text" id="presentationTitleInput" class="modal-input" placeholder="مثال: علم البديع" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-family: inherit; box-sizing: border-box;">
+      </div>
+
+      <!-- PRESENTATION PDF UPLOAD -->
+      <div class="modal-field" style="margin-bottom: 12px;">
+        <label style="font-weight: 700; font-size: 0.85rem; display: block; margin-bottom: 4px;">ملف العرض التقديمي (PDF)</label>
+        <div class="drop-zone" onclick="document.getElementById('presentationPdfInput').click()">
+          <span class="drop-zone-text" id="pdfDropZoneText">اضغط هنا لاختيار <b>ملف العرض (PDF)</b></span>
+          <input type="file" id="presentationPdfInput" style="display: none;" accept="application/pdf" onchange="updatePresentationPdfName(this)">
+        </div>
+      </div>
+
+      <!-- COVER IMAGE UPLOAD -->
+      <div class="modal-field" style="margin-bottom: 12px;">
+        <label style="font-weight: 700; font-size: 0.85rem; display: block; margin-bottom: 4px;">صورة الغلاف (JPG / PNG)</label>
+        <div class="drop-zone" onclick="document.getElementById('presentationCoverInput').click()">
+          <span class="drop-zone-text" id="coverDropZoneText">اضغط هنا لاختيار <b>صورة الغلاف</b></span>
+          <input type="file" id="presentationCoverInput" style="display: none;" accept="image/jpeg,image/png,image/webp" onchange="updatePresentationCoverName(this)">
+        </div>
+      </div>
+
+      <!-- ACTIONS -->
+      <div class="upload-modal-actions" style="margin-top: 18px; display: flex; gap: 10px;">
+        <button type="submit" class="btn-submit-upload" id="btnSubmitPresentation" style="flex:1;">تأكيد الرفع</button>
+        <button type="button" class="btn-cancel-upload" onclick="closeModal('presentationUploadModal')">إلغاء</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- PRESENTATION EDIT MODAL -->
+<div id="presentationEditModal" class="upload-modal-overlay">
+  <div class="upload-modal-card" style="max-width: 520px; max-height: 90vh; overflow-y: auto;">
+    <button class="modal-close-x" onclick="closeModal('presentationEditModal')">&times;</button>
+    <h3 class="upload-modal-title">تعديل العرض التقديمي</h3>
+    <p class="upload-modal-subtitle">تعديل بيانات المجموعة والمادة وعنوان الموضوع</p>
+
+    <form id="presentationEditForm" onsubmit="handlePresentationUpdate(event)">
+      <input type="hidden" id="editPresentationDocId">
+
+      <!-- GROUP SELECTION & GENDER TOGGLE -->
+      <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+        <div style="flex: 1;">
+          <label style="font-weight: 700; font-size: 0.85rem; display: block; margin-bottom: 4px;">المجموعة</label>
+          <div style="position: relative;">
+            <select id="editPresentationGroupNum" class="modal-select" required style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-family: inherit; appearance: none; -webkit-appearance: none; background: #ffffff url('data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'16\' height=\'16\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2364748b\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><polyline points=\'6 9 12 15 18 9\'/></svg>') no-repeat left 10px center; cursor: pointer;">
+              <option value="1">المجموعة الأولى</option>
+              <option value="2">المجموعة الثانية</option>
+              <option value="3">المجموعة الثالثة</option>
+              <option value="4">المجموعة الرابعة</option>
+              <option value="5">المجموعة الخامسة</option>
+              <option value="6">المجموعة السادسة</option>
+              <option value="7">المجموعة السابعة</option>
+              <option value="8">المجموعة الثامنة</option>
+              <option value="9">المجموعة التاسعة</option>
+              <option value="10">المجموعة العاشرة</option>
+              <option value="11">المجموعة الحادية عشرة</option>
+              <option value="12">المجموعة الثانية عشرة</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="flex: 1;">
+          <label style="font-weight: 700; font-size: 0.85rem; display: block; margin-bottom: 4px;">القسم</label>
+          <div style="position: relative;">
+            <select id="editPresentationGender" class="modal-select" required style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-family: inherit; appearance: none; -webkit-appearance: none; background: #ffffff url('data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'16\' height=\'16\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2364748b\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><polyline points=\'6 9 12 15 18 9\'/></svg>') no-repeat left 10px center; cursor: pointer;">
+              <option value="طلاب">طلاب</option>
+              <option value="طالبات">طالبات</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUBJECT SELECT -->
+      <div class="modal-field" style="margin-bottom: 12px;">
+        <label style="font-weight: 700; font-size: 0.85rem; display: block; margin-bottom: 4px;">المادة الدراسية</label>
+        <div style="position: relative;">
+          <select id="editPresentationSubjectSelect" class="modal-select" required style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-family: inherit; appearance: none; -webkit-appearance: none; background: #ffffff url('data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'16\' height=\'16\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2364748b\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><polyline points=\'6 9 12 15 18 9\'/></svg>') no-repeat left 10px center; cursor: pointer;">
+            <option value="balagha">البلاغة</option>
+            <option value="indonesian">اللغة الإندونيسية</option>
+            <option value="pkn">الوطنية الإندونيسية</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- TITLE INPUT -->
+      <div class="modal-field" style="margin-bottom: 12px;">
+        <label style="font-weight: 700; font-size: 0.85rem; display: block; margin-bottom: 4px;">عنوان الموضوع / العنوان الفرعي</label>
+        <input type="text" id="editPresentationTitleInput" class="modal-input" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-family: inherit; box-sizing: border-box;">
+      </div>
+
+      <!-- ACTIONS -->
+      <div class="upload-modal-actions" style="margin-top: 18px; display: flex; gap: 10px;">
+        <button type="submit" class="btn-submit-upload" style="flex:1;">حفظ التعديلات</button>
+        <button type="button" class="btn-cancel-upload" onclick="closeModal('presentationEditModal')">إلغاء</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- PRESENTATION DELETE CONFIRMATION MODAL -->
+<div id="presentationDeleteConfirmModal" class="logout-modal-overlay">
+  <div class="logout-modal-card">
+    <div class="logout-modal-icon" style="color: #dc2626;">🗑️</div>
+    <h3 class="logout-modal-title">تأكيد الحذف</h3>
+    <p class="logout-modal-text">هل أنت تأكد من أنك تريد حذف هذا العرض التقديمي نهائياً؟</p>
+    <div class="logout-modal-actions">
+      <button class="logout-confirm-btn" id="btnConfirmDeletePresentation" style="background-color: #dc2626;">نعم، تأكيد الحذف</button>
+      <button class="logout-cancel-btn" onclick="closeModal('presentationDeleteConfirmModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
