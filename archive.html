@@ -241,8 +241,10 @@
           <h2 class="section-title">العرض التقديمي</h2>
           <button class="btn-upload-whiteboard" onclick="openPresentationUploadModal()">+ إضافة عرض تقديمي</button>
         </div>
-        <a href="#" class="view-all-link">&rarr; عرض الكل</a>
-      </div>
+        <a href="presentations.html" class="view-all-link" onclick="smoothNavigate(event, 'presentations.html')">
+          عرض الكل &rarr;
+        </a>
+            </div>
 
   <div class="archive-filter-bar">
     <select class="level-select">
@@ -1649,6 +1651,59 @@ function extractOrdinalNum(title) {
   }
   return '1';
 }
+
+// Function to parse feminine ordinal numbers & digits
+function parseGroupNumber(title) {
+  if (!title) return 0;
+  
+  // 1. Check for explicit numbers/digits (e.g., 12, 11, 10...)
+  const matchDigit = title.match(/\d+/);
+  if (matchDigit) return parseInt(matchDigit[0], 10);
+
+  // 2. Match feminine ordinals only
+  const feminineOrdinals = {
+    'الأولى': 1,
+    'الثانية': 2,
+    'الثالثة': 3,
+    'الرابعة': 4,
+    'الخامسة': 5,
+    'السادسة': 6,
+    'السابعة': 7,
+    'الثامنة': 8,
+    'التاسعة': 9,
+    'العاشرة': 10,
+    'الحادية عشرة': 11,
+    'الثانية عشرة': 12
+  };
+
+  for (const [key, val] of Object.entries(feminineOrdinals)) {
+    if (title.includes(key)) return val;
+  }
+  
+  return 0;
+}
+
+// Function to set gender priority (الطلاب = 1, الطالبات = 2)
+function parseGenderOrder(title) {
+  if (!title) return 2;
+  if (title.includes('الطلاب') || title.includes('طلاب')) return 1;
+  if (title.includes('الطالبات') || title.includes('طالبات')) return 2;
+  return 3;
+}
+
+// Sort presentations array descending (12 down to 1, Male before Female)
+visiblePresentations.sort((a, b) => {
+  const groupA = parseGroupNumber(a.title);
+  const groupB = parseGroupNumber(b.title);
+
+  // 1. Sort by group number descending (12 -> 1)
+  if (groupA !== groupB) {
+    return groupB - groupA;
+  }
+
+  // 2. If same group number: place الطلاب before الطالبات
+  return parseGenderOrder(a.title) - parseGenderOrder(b.title);
+});
 
 function openPresentationEditModal(docId, title, subtitle, category) {
   document.getElementById('editPresentationDocId').value = docId;

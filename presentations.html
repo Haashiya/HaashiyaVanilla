@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>العروض التقديمية - حاشية</title>
+
+  <link rel="icon" type="image/png" href="assets/images/web/haashiya_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700;800&family=Work+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="archive.css">
+
+  <!-- Firebase Compatibility SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBJWMb7l6DT1PFRUoDbi59FSs1iOZPntWI",
+      authDomain: "haashiya-web.firebaseapp.com",
+      projectId: "haashiya-web",
+      storageBucket: "haashiya-web.firebasestorage.app",
+      messagingSenderId: "340726241497",
+      appId: "1:340726241497:web:b5f62320301fc724fac6c8"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.firestore();
+  </script>
+</head>
+
+<body>
+  <!-- NAVBAR -->
+  <header class="navbar">
+    <div class="navbar-container">
+      <div class="navbar-left">
+        <a href="index.html" class="logo-link" onclick="smoothNavigate(event, 'index.html')">
+          <img src="assets/images/web/navbar_logo.png" alt="حاشية" class="navbar-logo">
+        </a>
+      </div>
+
+      <div class="navbar-right">
+        <a href="login.html" class="btn-login" onclick="smoothNavigate(event, 'login.html')">تسجيل الدخول</a>
+        <button class="icon-btn" aria-label="Menu" onclick="toggleSidebar()">
+          <span class="dots-icon"></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar Overlay -->
+  <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+  <!-- Sidebar Container -->
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+      <button id="close-sidebar-btn" class="btn-close" aria-label="Tutup" onclick="toggleSidebar()">
+        <img src="assets/images/web/sidebar_icon.png" alt="Logo" class="sidebar-logo-img">
+      </button>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="menu-items">
+      <a href="index.html" class="menu-link menu-home" onclick="toggleSidebar(); smoothNavigate(event, 'index.html')">الرئيسية</a>
+      <a href="archive.html" class="menu-link" onclick="toggleSidebar(); smoothNavigate(event, 'archive.html')">معرض الأرشيف</a>
+      <a href="library.html" class="menu-link" onclick="toggleSidebar(); smoothNavigate(event, 'library.html')">المكتبة الرقمية</a>
+      <a href="index.html#glossary" class="menu-link">معجم المصطلحات</a>
+      <a href="index.html#calendar" class="menu-link">التقويم الأكاديمي</a>
+      <a href="#" class="menu-link">التعلم المدعوم بالذكاء الاصطناعي</a>
+    </div>
+  </aside>
+
+  <main class="library-wrapper">
+    <section class="main-card-section">
+      <div class="section-header">
+        <h2 id="pageTitle" class="section-title">جميع العروض التقديمية</h2>
+        <a href="archive.html" class="view-all-link" onclick="smoothNavigate(event, 'archive.html')">&rarr; العودة للأرشيف</a>
+      </div>
+
+      <!-- Category Filter Tabs -->
+      <div class="category-buttons" style="margin-bottom: 24px; display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px;">
+        <button class="cat-btn active" onclick="filterCategory('all', this)">الكل</button>
+        <button class="cat-btn" onclick="filterCategory('balagha', this)">البلاغة</button>
+        <button class="cat-btn" onclick="filterCategory('indonesian', this)">اللغة الإندونيسية</button>
+        <button class="cat-btn" onclick="filterCategory('pkn', this)">الوطنية الإندونيسية</button>
+      </div>
+
+      <!-- Presentations Grid Container -->
+      <div id="presentationsContainer" class="presentations-grid-list">
+        <!-- Dynamic items render here -->
+      </div>
+    </section>
+  </main>
+
+  <!-- DELETE PRESENTATION MODAL -->
+  <div id="deletePresentationModal" class="logout-modal-overlay">
+    <div class="logout-modal-card" style="max-width: 380px; text-align: center; padding: 24px;">
+        <div style="display: flex; align-items: center; justify-content: center; margin: 0 auto 12px auto; font-size: 2.2rem;">
+            🗑️
+          </div>
+                <h3 style="margin: 0 0 8px 0; color: #0f172a; font-size: 1.15rem; font-weight: 800;">حذف العرض التقديمي</h3>
+      <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 20px; line-height: 1.5;">هل أنت تأكد من رغبتك في حذف هذا العرض التقديمي نهائياً؟</p>
+      
+      <div style="display: flex; gap: 12px; justify-content: center; width: 100%;">
+        <button type="button" onclick="confirmDeletePresentationAction()" style="flex: 1; width: 50%; padding: 10px 0; background: #ef4444; color: #ffffff; border: none; border-radius: 8px; font-weight: 700; font-size: 0.9rem; cursor: pointer;">
+          نعم، احذف
+        </button>
+        <button type="button" onclick="closeDeletePresentationModal()" style="flex: 1; width: 50%; padding: 10px 0; background: #f1f5f9; color: #475569; border: none; border-radius: 8px; font-weight: 700; font-size: 0.9rem; cursor: pointer;">
+          إلغاء
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER AT THE VERY BOTTOM -->
+  <footer class="site-footer">
+    <div class="footer-overlay">
+      <div class="footer-container">
+        <img src="assets/images/web/footer_preview.png" alt="footer" class="footer-logo">
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    let allPresentations = [];
+    let activeCategory = 'all';
+    let pendingDeletePresentationId = null;
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      if (sidebar && overlay) {
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('active');
+      }
+    }
+
+    function smoothNavigate(event, targetUrl) {
+      event.preventDefault();
+      document.body.classList.add('fade-out');
+      setTimeout(() => { window.location.href = targetUrl; }, 300);
+    }
+
+    function checkUserSession() {
+      const sessionData = localStorage.getItem('currentUser');
+      const navbarRight = document.querySelector('.navbar-right');
+
+      if (sessionData && navbarRight) {
+        const user = JSON.parse(sessionData);
+        const isAdminOrSuper = user.role === 'admin' || user.role === 'superadmin';
+        const isMale = user.gender === 'male';
+
+        const genderBadgeHTML = isMale ? `
+          <span class="gender-badge gender-male">
+            <svg class="gender-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="10" cy="14" r="5"></circle><path d="M19 5L13.5 10.5"></path><path d="M19 5h-5"></path><path d="M19 5v5"></path></svg>
+            طالب
+          </span>` : `
+          <span class="gender-badge gender-female">
+            <svg class="gender-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="10" r="5"></circle><path d="M12 15v7"></path><path d="M9 19h6"></path></svg>
+            طالبة
+          </span>`;
+
+        const adminDropdownLink = isAdminOrSuper ? `
+          <a href="admin.html" class="dropdown-item admin-dropdown-item" onclick="smoothNavigate(event, 'admin.html')" style="color: #d97706; font-weight: 700;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            لوحة التحكم (الإدارة)
+          </a>
+          <div class="dropdown-divider"></div>
+        ` : '';
+
+        navbarRight.innerHTML = `
+          <div class="user-profile-wrapper">
+            <button class="user-profile-badge" onclick="toggleProfileDropdown(event)">
+              <img src="${user.avatar || 'assets/images/web/default_avatar.png'}" alt="${user.name}" class="profile-avatar" onError="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=1565c0&color=fff'">
+              <div class="profile-info-group">
+                <span class="profile-name">${user.name}</span>
+                ${genderBadgeHTML}
+              </div>
+              <svg class="dropdown-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+
+            <div id="profileDropdown" class="profile-dropdown-menu">
+              ${adminDropdownLink}
+              <a href="profile.html" class="dropdown-item" onclick="smoothNavigate(event, 'profile.html')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                الملف الشخصي
+              </a>
+              <div class="dropdown-divider"></div>
+              <button class="dropdown-item logout-item" onclick="logoutUser()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                تسجيل الخروج
+              </button>
+            </div>
+          </div>
+
+          <button id="open-sidebar-btn" class="btn-menu mobile-only-btn" aria-label="القائمة" onclick="toggleSidebar()">
+            <svg width="22" height="22" viewBox="0 0 16 18" fill="currentColor">
+              <path d="M8 1L11.5 4.5L8 8L4.5 4.5Z"/>
+              <path d="M8 4.5L11.5 8L8 11.5L4.5 8Z" transform="translate(0, 2)"/>
+              <path d="M8 8L11.5 11.5L8 15L4.5 11.5Z" transform="translate(0, 4)"/>
+            </svg>
+          </button>
+        `;
+      }
+    }
+
+    function normalizeCategory(item) {
+      const cat = (item.category || '').toLowerCase().trim();
+      const subject = (item.subject || '').toLowerCase().trim();
+      const title = (item.title || '').toLowerCase().trim();
+
+      if (cat === 'pkn' || subject.includes('وطنية') || subject.includes('pkn') || title.includes('وطنية')) return 'pkn';
+      if (cat === 'indonesian' || subject.includes('إندونيسية') || subject.includes('indonesian') || title.includes('إندونيسية')) return 'indonesian';
+      return 'balagha';
+    }
+
+    function parseGroupNumber(title) {
+      if (!title) return 0;
+      const matchDigit = title.match(/\d+/);
+      if (matchDigit) return parseInt(matchDigit[0], 10);
+
+      const feminineOrdinals = {
+        'الأولى': 1, 'الثانية': 2, 'الثالثة': 3, 'الرابعة': 4,
+        'الخامسة': 5, 'السادسة': 6, 'السابعة': 7, 'الثامنة': 8,
+        'التاسعة': 9, 'العاشرة': 10, 'الحادية عشرة': 11, 'الثانية عشرة': 12
+      };
+
+      for (const [key, val] of Object.entries(feminineOrdinals)) {
+        if (title.includes(key)) return val;
+      }
+      return 0;
+    }
+
+    function parseGenderOrder(title) {
+      if (!title) return 2;
+      if (title.includes('الطلاب') || title.includes('طلاب')) return 1;
+      if (title.includes('الطالبات') || title.includes('طالبات')) return 2;
+      return 3;
+    }
+
+    async function downloadFile(event, fileUrl, defaultFilename) {
+      event.preventDefault();
+      try {
+        const response = await fetch(fileUrl);
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = defaultFilename || 'presentation.pdf';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(blobUrl);
+      } catch (err) {
+        window.open(fileUrl, '_blank');
+      }
+    }
+
+    // --- ADMIN ACTION HANDLERS ---
+    function deletePresentation(id) {
+      pendingDeletePresentationId = id;
+      const modal = document.getElementById('deletePresentationModal');
+      if (modal) modal.classList.add('show');
+    }
+
+    function closeDeletePresentationModal() {
+      const modal = document.getElementById('deletePresentationModal');
+      if (modal) modal.classList.remove('show');
+      pendingDeletePresentationId = null;
+    }
+
+    async function confirmDeletePresentationAction() {
+      if (!pendingDeletePresentationId) return;
+      try {
+        await db.collection('presentations').doc(pendingDeletePresentationId).delete();
+        closeDeletePresentationModal();
+        location.reload();
+      } catch (err) {
+        console.error("Error deleting presentation:", err);
+      }
+    }
+
+    function editPresentation(id) {
+      window.location.href = `admin.html?editPresentation=${id}`;
+    }
+
+    function filterCategory(cat, btn) {
+      activeCategory = cat;
+      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      renderPresentations();
+    }
+
+    function renderPresentations() {
+      const container = document.getElementById('presentationsContainer');
+      if (!container) return;
+
+      const sessionData = localStorage.getItem('currentUser');
+      const user = sessionData ? JSON.parse(sessionData) : null;
+      const isAdminOrSuper = user && (user.role === 'admin' || user.role === 'superadmin');
+
+      const filtered = activeCategory === 'all'
+        ? [...allPresentations]
+        : allPresentations.filter(p => normalizeCategory(p) === activeCategory);
+
+      filtered.sort((a, b) => {
+        const groupA = parseGroupNumber(a.title);
+        const groupB = parseGroupNumber(b.title);
+        if (groupA !== groupB) return groupB - groupA;
+        return parseGenderOrder(a.title) - parseGenderOrder(b.title);
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #94a3b8; padding: 40px 0; width: 100%;">لا توجد عروض تقديمية لهذا القسم حالياً.</p>';
+        return;
+      }
+
+      container.innerHTML = '';
+      filtered.forEach(item => {
+        const safeFilename = `${(item.title || 'presentation').replace(/\s+/g, '_')}.pdf`;
+        const itemCat = normalizeCategory(item);
+
+        const adminButtons = (isAdminOrSuper && item.id) ? `
+  <button type="button" class="btn-circle-action btn-action-edit" onclick="editPresentation('${item.id}')" title="تعديل العرض">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+    </svg>
+  </button>
+  <button type="button" class="btn-circle-action btn-action-delete" onclick="deletePresentation('${item.id}')" title="حذف العرض">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polyline points="3 6 5 6 21 6"></polyline>
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+    </svg>
+  </button>
+` : '';
+
+        container.innerHTML += `
+          <div class="presentation-card" data-category="${itemCat}">
+            <div class="presentation-right-group">
+              <img src="${item.thumbnail || 'assets/images/web/default_cover.png'}" alt="cover" class="presentation-thumb">
+              <div class="presentation-info">
+                <h3 class="presentation-title">${item.title}</h3>
+                <p class="presentation-subtitle">${item.subtitle || ''}</p>
+                <p class="presentation-subject">${item.subject || (itemCat === 'balagha' ? 'مادة البلاغة' : itemCat === 'indonesian' ? 'مادة اللغة الإندونيسية' : 'مادة الوطنية الإندونيسية')}</p>
+              </div>
+            </div>
+
+            <div class="presentation-left-actions">
+              ${adminButtons}
+              <button type="button" class="btn-circle-action" onclick="window.open('${item.fileUrl}', '_blank')" title="عرض العرض التقديمي">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </button>
+              <button type="button" class="btn-circle-action" onclick="downloadFile(event, '${item.fileUrl}', '${safeFilename}')" title="تحميل الملف">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkUserSession();
+
+      const container = document.getElementById('presentationsContainer');
+      container.innerHTML = '<p style="text-align: center; color: #64748b; padding: 30px 0;">جاري تحميل العروض التقديمية...</p>';
+
+      try {
+        const snapshot = await db.collection('presentations').get();
+        if (!snapshot.empty) {
+          allPresentations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } else {
+          allPresentations = [];
+        }
+
+        renderPresentations();
+      } catch (err) {
+        console.error('Error loading presentations:', err);
+        container.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 30px 0;">حدث خطأ أثناء تحميل البيانات</p>';
+      }
+    });
+  </script>
+</body>
+</html>
